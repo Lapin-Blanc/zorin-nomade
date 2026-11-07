@@ -1,0 +1,11 @@
+# zorin-nomade (SPEC E-32) — généré au déploiement pour le pont USB @VID@:@PID@ de la clé.
+# Ces règles s'appliquent aussi à tout autre support utilisant le même pont : sans effet néfaste.
+
+# SSD derrière le pont : pas de rotation, ordonnanceur adapté.
+ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]", ATTRS{idVendor}=="@VID@", ATTRS{idProduct}=="@PID@", ATTR{queue/rotational}="0", ATTR{queue/scheduler}="mq-deadline"
+
+# Le disque système ne doit jamais être mis en veille par la gestion d'énergie USB.
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="@VID@", ATTR{idProduct}=="@PID@", TEST=="power/control", ATTR{power/control}="on"
+
+# TRIM : ligne présente uniquement si un essai de discard a réussi au déploiement.
+@UNMAP_RULE@

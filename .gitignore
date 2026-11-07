@@ -1,0 +1,11 @@
+# Artefacts et environnements locaux — jamais versionnés
+cache/
+out/
+.builder/
+reference/
+config/local.env
+.claude/settings.local.json
+*.img
+*.qcow2
+*.iso
+*.part

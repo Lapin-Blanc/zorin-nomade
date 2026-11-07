@@ -1,0 +1,17 @@
+# zorin-nomade (SPEC E-35) — autotest de l'image.
+# Inerte sur une vraie machine : ignoré hors VM, et le script sort aussitôt si QEMU
+# n'expose pas fw_cfg « opt/nomade/selftest ».
+# Type=simple et pas d'ordre « After=multi-user.target » : le script attend lui-même la fin
+# du démarrage (systemctl is-system-running --wait), sans bloquer la file des tâches.
+[Unit]
+Description=Autotest de l'image zorin-nomade (VM de test uniquement)
+ConditionVirtualization=vm
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/nomade/selftest.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

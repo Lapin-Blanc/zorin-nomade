@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Exécute une commande dans la VM de build : ./scripts/bssh sudo lsblk
+# Sans argument : shell interactif dans la VM.
+set -Eeuo pipefail
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cfg="$root/.builder/ssh_config"
+[[ -f "$cfg" ]] || { echo "VM de build absente : make builder" >&2; exit 1; }
+if (($# == 0)); then exec ssh -t -F "$cfg" builder; fi
+exec ssh -F "$cfg" builder "$@"

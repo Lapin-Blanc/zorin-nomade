@@ -1,0 +1,19 @@
+# zorin-nomade (SPEC E-15, E-26) — base dconf système « local ».
+# Nécessite un profil /etc/dconf/profile/user contenant « system-db:local » (à fusionner
+# avec le profil existant du squashfs s'il y en a un), puis « dconf update » en chroot.
+
+[org/gnome/software]
+download-updates=false
+download-updates-notify=false
+
+# Indexation de contenu désactivée ; la recherche par nom de fichier reste disponible.
+[org/freedesktop/tracker/miner/files]
+index-recursive-directories=@as []
+index-single-directories=@as []
+index-removable-devices=false
+index-optical-discs=false
+enable-monitors=false
+crawling-interval=-2
+
+[org/gnome/desktop/input-sources]
+sources=[('xkb', 'be')]

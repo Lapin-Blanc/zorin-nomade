@@ -1,0 +1,48 @@
+#cloud-config
+# VM de build jetable — rendu par scripts/builder.sh (@SSH_PUBKEY@ remplacé).
+hostname: nomade-builder
+manage_etc_hosts: true
+ssh_pwauth: false
+disable_root: true
+users:
+  - name: builder
+    gecos: VM de build zorin-nomade
+    groups: [sudo, disk]
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - @SSH_PUBKEY@
+growpart:
+  mode: auto
+  devices: ["/"]
+resize_rootfs: true
+package_update: true
+package_upgrade: false
+packages:
+  - squashfs-tools
+  - xorriso
+  - gdisk
+  - parted
+  - dosfstools
+  - mtools
+  - e2fsprogs
+  - exfatprogs
+  - cryptsetup
+  - bmap-tools
+  - qemu-utils
+  - rsync
+  - zstd
+  - jq
+  - curl
+  - ca-certificates
+  - arch-install-scripts
+  - debconf-utils
+  - util-linux
+  - udev
+  - shellcheck
+runcmd:
+  - [sh, -c, "echo 'Defaults:builder !requiretty' > /etc/sudoers.d/90-builder-tty && chmod 440 /etc/sudoers.d/90-builder-tty"]
+  - [mkdir, -p, /work]
+  - [chown, "builder:builder", /work]
+  - [sh, -c, "rm -f /var/lib/nomade-builder-missing; for c in unsquashfs xorriso sgdisk parted mkfs.vfat mkfs.ext4 mkfs.exfat cryptsetup bmaptool qemu-img rsync arch-chroot; do command -v $c >/dev/null || echo $c >> /var/lib/nomade-builder-missing; done; touch /var/lib/nomade-builder-ready"]

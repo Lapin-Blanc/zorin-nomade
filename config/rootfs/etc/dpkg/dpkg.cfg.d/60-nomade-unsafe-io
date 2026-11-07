@@ -1,0 +1,3 @@
+# zorin-nomade (SPEC E-23) : pas de fsync par fichier pendant apt/dpkg.
+# Acceptable car la clé n'est jamais débranchée à chaud.
+force-unsafe-io
