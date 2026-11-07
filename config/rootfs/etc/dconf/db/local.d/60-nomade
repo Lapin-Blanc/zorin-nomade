@@ -1,19 +1,21 @@
 # zorin-nomade (SPEC E-15, E-26) — base dconf système « local ».
-# Nécessite un profil /etc/dconf/profile/user contenant « system-db:local » (à fusionner
-# avec le profil existant du squashfs s'il y en a un), puis « dconf update » en chroot.
+# Nécessite un profil /etc/dconf/profile/user contenant « system-db:local » (absent du squashfs
+# de Zorin 18.1 : à créer, voir docs/iso-notes.md), puis « dconf update » en chroot.
 
 [org/gnome/software]
 download-updates=false
 download-updates-notify=false
 
-# Indexation de contenu désactivée ; la recherche par nom de fichier reste disponible.
+# Tracker 3.7 (GNOME 46) : les noms de fichiers restent indexés (dossiers par défaut), pour que la
+# recherche par nom de la vue d'ensemble et de Fichiers continue de fonctionner ; l'extraction du
+# contenu des documents (texte intégral) est coupée. Voir DECISIONS.md D-020.
 [org/freedesktop/tracker/miner/files]
-index-recursive-directories=@as []
-index-single-directories=@as []
 index-removable-devices=false
 index-optical-discs=false
-enable-monitors=false
-crawling-interval=-2
+
+[org/freedesktop/tracker/extract]
+max-bytes=0
+text-allowlist=@as []
 
 [org/gnome/desktop/input-sources]
 sources=[('xkb', 'be')]

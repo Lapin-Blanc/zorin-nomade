@@ -3,76 +3,138 @@
 Légende : `[ ]` à faire · `[x]` fait · `[!]` bloqué (raison dans `docs/JOURNAL.md`).
 Chaque phase se termine par `make lint` propre et un commit. Les critères d'acceptation
 sont **vérifiables** : une phase n'est terminée que lorsqu'ils passent.
+Références constantes : `docs/iso-notes.md` (constats sur l'ISO, recette, pièges) et les décisions
+D-013 à D-028.
 
 ## Phase 0 — État des lieux (interactive, effort xhigh)
 
-- [ ] Lire `CLAUDE.md`, `SPEC.md`, `DECISIONS.md`, `README.md`.
-- [ ] Initialiser git si nécessaire (commit initial de la base).
-- [ ] `make doctor` ; reporter dans `docs/A-FAIRE-FABIEN.md` ce qui manque sur l'hôte.
-- [ ] Parcourir `reference/debian` (si présent) : relever les conventions utiles (Makefile,
+- [x] Lire `CLAUDE.md`, `SPEC.md`, `DECISIONS.md`, `README.md`.
+- [x] Initialiser git si nécessaire (commit initial de la base).
+- [x] `make doctor` ; reporter dans `docs/A-FAIRE-FABIEN.md` ce qui manque sur l'hôte.
+- [x] Parcourir `reference/debian` (si présent) : relever les conventions utiles (Makefile,
       VM de création, CI/CD, tests, journalisation) et les adopter quand elles conviennent
       (décisions dans `DECISIONS.md`). Ne rien y écrire.
-- [ ] Trouver la dernière ISO **Zorin OS 18.x Core** officielle et son SHA-256 publié par Zorin ;
+- [x] Trouver la dernière ISO **Zorin OS 18.x Core** officielle et son SHA-256 publié par Zorin ;
       remplir `config/iso.env` (avec la source de l'empreinte). `make iso`.
-- [ ] `make builder` ; vérifier SSH, cloud-init, espace disque dans la VM.
-- [ ] Inspecter l'ISO dans la VM et consigner dans `docs/iso-notes.md` :
-      - organisation des squashfs (couche unique ou couches à empiler, ordre, fichiers
-        de description) ;
-      - paquets à retirer après installation (manifeste « remove » ou équivalent) ;
-      - où se trouvent `shim-signed`, `grub-efi-amd64-signed`, les paquets de langue
-        (squashfs ? pool de l'ISO ? réseau ?) ;
-      - noyau, initramfs-tools, présence de snapd et de snaps, profil dconf existant,
-        nom du paquet de l'installateur Zorin ;
-      - disponibilité de `systemd-zram-generator` et `profile-sync-daemon`.
-- [ ] Ajuster les phases 1 à 5 ci-dessous selon ces constats.
-- [ ] **S'arrêter** et présenter à Fabien : constats, décisions, plan ajusté, points ouverts.
+- [x] `make builder` ; vérifier SSH, cloud-init, espace disque dans la VM.
+- [x] Inspecter l'ISO dans la VM et consigner dans `docs/iso-notes.md`.
+- [x] Ajuster les phases 1 à 5 ci-dessous selon ces constats.
+- [x] **S'arrêter** et présenter à Fabien : constats, décisions, plan ajusté, points ouverts.
 
 ## Phase 1 — Image minimale qui démarre
 
-- [ ] `scripts/build-image.sh` (orchestration depuis l'hôte) + scripts exécutés dans la VM
-      (par ex. `scripts/vm/…`), idempotents, journalisés dans `out/logs/build-*.log`.
-- [ ] Image creuse, GPT selon E-06, systèmes de fichiers, montage.
-- [ ] Décompression du ou des squashfs (E-03), purge des éléments live (E-02).
-- [ ] Chroot : fstab (E-07), hostname, utilisateur verrouillé (E-17), locale/clavier/fuseau
-      (E-15, E-16), noyau + initramfs (E-12), shim + GRUB amovible sans NVRAM (E-09, E-11).
-- [ ] Copie de l'overlay `config/rootfs/`, écriture de `/etc/nomade/*` (E-08), activation
-      de `nomade-selftest.service`.
-- [ ] Artefacts `out/` (E-05), rapatriement sur l'hôte (`builder.sh pull`, en préservant le creux).
+Architecture (D-017) : `scripts/vm/*.sh` = scripts root autonomes (VM de build **ou** runner CI),
+chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exécution → rapatriement.
+
+- [ ] `config/packages.env` (ou `config/packages/*.list`) : liste à garder du manifeste (29 paquets,
+      `docs/iso-notes.md` § 3), paquets à ajouter (`grub-efi-amd64 grub-efi-amd64-signed shim-signed
+      mokutil systemd-zram-generator profile-sync-daemon`), à retirer en plus (`snapd
+      gnome-software-plugin-snap zorin-os-census`).
+- [ ] `scripts/build-image.sh` (hôte) : `make builder`, envoi du dépôt (scripts + config) et de
+      l'ISO (si absente ou d'empreinte différente) dans `/work`, exécution de `scripts/vm/build.sh`
+      sous `sudo`, journal `out/logs/build-<horodatage>.log`, rapatriement en préservant le creux.
+- [ ] `scripts/vm/build.sh` : tout dans `unshare --mount --propagation private`, nettoyage par
+      `trap` (processus du chroot tués, démontages, `losetup -d`), idempotent (repart de zéro).
+- [ ] Image creuse `IMAGE_ESP_MIB + IMAGE_BOOT_MIB + IMAGE_ROOT_GIB`, GPT E-06 (`sgdisk`, types
+      EF00/8300/8300, étiquettes), `mkfs.vfat -F 32 -n NOMADE-ESP`, `mkfs.ext4 -L nomade-boot/root`.
+- [ ] `unsquashfs` de `casper/filesystem.squashfs` directement dans la racine montée ; contenu de
+      `/boot` déplacé sur p2 ; ESP sur `/boot/efi`.
+- [ ] Préparation du chroot : `/dev` (rbind, rslave), `/proc`, `/sys`, `/run` (tmpfs) avec
+      **`run/systemd/resolve/stub-resolv.conf`** (lien `resolv.conf`, voir iso-notes § 8),
+      `policy-rc.d` (101), cache APT lié depuis `/work/cache/apt` (hors image), debconf GRUB
+      (`force_efi_extra_removable=true`, `update_nvram=false`) **avant** l'installation de GRUB,
+      crochet APT `99-nomade-no-shim-fallback` (supprime `EFI/BOOT/fbx64.efi` et `BOOTX64.CSV`).
+- [ ] Transaction APT unique (D-014, D-025, D-027), journal de ce qui est purgé ; puis
+      `full-upgrade` (≈ 1,7 Go la première fois, noyau 7.0) et `autoremove --purge` (ancien noyau) ;
+      contrôle : aucun paquet live (`casper`, `ubiquity*`, `user-setup`, `*-zorin-live`) ni snapd.
+- [ ] Configuration : `fstab` par UUID (E-07), hostname + `127.0.1.1` (E-17), `/etc/adjtime`
+      `LOCAL` (E-16), `locale-gen` + `update-locale LANG=fr_BE.UTF-8 LANGUAGE=fr_BE:fr`, clavier
+      `be` (`/etc/default/keyboard`, `setupcon --save-only`), fuseau (E-15), utilisateur UID 1000,
+      groupes `adm cdrom dip lpadmin plugdev sambashare users sudo` (filtrés sur l'existant),
+      compte verrouillé (E-17), `machine-id` vide.
+- [ ] Copie de l'overlay `config/rootfs/` (sans écraser un fichier existant du squashfs sans
+      fusion consignée), `/etc/nomade/expected.env` et `build-info` (E-08), activation de
+      `nomade-selftest.service`.
+- [ ] initramfs (E-12) : `RESUME=none` (overlay ; `MODULES=most` déjà par défaut),
+      `update-initramfs -u -k all` après la purge de casper.
+- [ ] GRUB (E-09, E-11, E-41) : `grub-install --target=x86_64-efi --efi-directory=/boot/efi
+      --uefi-secure-boot --no-nvram --force-extra-removable` (relever le dossier `EFI/<id>` produit
+      avec `GRUB_DISTRIBUTOR=Zorin`), `update-grub` ; contrôles bloquants : `BOOTX64.EFI` = shim,
+      `EFI/BOOT/grubx64.efi` identique à `EFI/<id>/grubx64.efi`, `mmx64.efi` présent, pas de
+      `fbx64.efi`/`BOOTX64.CSV`, `grub.cfg` atteignable depuis `EFI/BOOT`, aucune entrée `osprober`.
+- [ ] Nettoyage : `apt-get clean`, démontage du cache, `resolv`, `/tmp`, journaux ; `fstrim` de
+      l'ESP ; démontage strict puis `e2fsck -f -p -E discard` des deux ext4 ; « blocs alloués » affiché.
+- [ ] Artefacts `out/` (E-05) : `.img`, `.bmap` (`bmaptool create`), `.manifest`, `.sha256`,
+      lien `out/latest.img` ; rapatriement creux.
+- [ ] Mémoire (D-016) : `test-image.sh` vérifie la RAM disponible et arrête la VM de build si elle
+      tourne et qu'il en manque.
 - [ ] **Acceptation** : `make test` → les deux essais (Secure Boot on/off) atteignent
       `graphical.target`, la capture montre l'écran de connexion GNOME.
 
 ## Phase 2 — Réglages et autotest complet
 
-- [ ] Appliquer E-13, E-14, E-18 à E-27 (fusionner proprement avec l'existant du squashfs).
-- [ ] `apt full-upgrade`, paquets de langue (E-15), manifeste (E-04).
-- [ ] Compléter `config/rootfs/usr/local/lib/nomade/selftest.sh` pour couvrir E-36
-      (une ligne par exigence vérifiable).
+- [ ] E-13 (aucun pilote NVIDIA : rien à installer, contrôler), E-14 (déjà dans le squashfs).
+- [ ] E-19 à E-24 : overlay sysctl, zram (`zram-generator.conf`), `tmp.mount` copié depuis
+      `/usr/share/systemd/` puis activé, journald, dpkg `force-unsafe-io`, `fstrim.timer` (déjà actif).
+- [ ] E-25 (D-021) : `config/rootfs/usr/share/psd/browsers/brave`, `systemctl --global enable
+      psd.service`.
+- [ ] E-26 (D-020) : créer `/etc/dconf/profile/user` (`user-db:user`, `system-db:local`), base
+      `local` de l'overlay, `dconf update`.
+- [ ] E-40 (D-024) : `systemctl disable` de `smartd`, `smartmontools`, `NetworkManager-wait-online`,
+      `whoopsie` (+ `whoopsie.path`), `kerneloops`, `ModemManager`.
+- [ ] E-15 : `check-language-support -l fr` vide **après** la purge (installer ce qu'il propose) ;
+      E-04 : manifeste `dpkg-query` livré (`out/*.manifest` et copie dans `/etc/nomade/`).
+- [ ] Autotest (`selftest.sh`) — lignes à ajouter : E-09 (pas de `fbx64.efi`/`BOOTX64.CSV`,
+      `cmp` du `grubx64.efi` amovible, `mmx64.efi`, debconf `update_nvram=false`), E-25 (définition
+      Brave, psd activé), E-26 (lecture `gsettings` avec `DCONF_PROFILE=user` et un `HOME` vide :
+      `max-bytes=0`, `download-updates=false`), E-27 (snapd absent, pas de `/snap`), E-39 (census
+      absent), E-40 (services désactivés), E-41 (`GRUB_DISABLE_OS_PROBER=true`, aucune entrée
+      `osprober` dans `grub.cfg`), E-15 (`check-language-support -l fr` vide, `fr_BE.UTF-8`
+      compilée), E-12 (initrd contient la disposition clavier si `KEYMAP=y`, après la phase 3).
 - [ ] **Acceptation** : `make test` → `RESULT=PASS` avec Secure Boot activé **et** désactivé.
 
 ## Phase 3 — Déploiement
 
-- [ ] `scripts/deploy.sh` selon E-28 à E-34 (garde-fous de `lib.sh` obligatoires).
-- [ ] `scripts/deploy-test.sh` : exécution dans la VM vers un fichier creux de 64 Gio (E-37),
-      rapatriement, démarrage QEMU avec déverrouillage LUKS automatisé propre au test
-      (méthode au choix : saisie scriptée via QMP/série, etc. — à documenter).
-- [ ] Étendre `scripts/test-image.sh` si nécessaire (option pour une image chiffrée).
+- [ ] `scripts/deploy.sh` selon E-28 à E-34 (garde-fous de `lib.sh` obligatoires) : `bmaptool copy`,
+      puis si chiffrement : **chiffrer avant d'agrandir** — `resize2fs` de la racine à
+      `taille − 32 Mio`, `cryptsetup reencrypt --encrypt --type luks2 --reduce-device-size 32M`
+      hors ligne (méthode « en place » ; repli : recréation `luksFormat` + copie, à trancher et
+      consigner), ouverture `--persistent --perf-no_read_workqueue --perf-no_write_workqueue
+      --allow-discards` ; ensuite `sgdisk -e`, agrandissement de p3 (moins `DEPLOY_DATA_GIB`),
+      `cryptsetup resize`, `resize2fs` ; partition exFAT optionnelle.
+- [ ] Chroot de la cible : `crypttab` (`luks,discard,initramfs`), `fstab` vers `/dev/mapper/…`,
+      `KEYMAP=y` (+ `setupcon --save-only`), `update-initramfs`, `update-grub`, mot de passe de
+      l'utilisateur (`chpasswd`), règle udev depuis le modèle (VID:PID détecté ; essai de discard
+      pour `provisioning_mode=unmap`), contrôles finaux (fsck, chemin amovible), checklist affichée.
+- [ ] `scripts/deploy-test.sh` (E-37) : dans la VM, fichier creux de `DEPLOY_TEST_SIZE_GIB`,
+      `DEPLOY_TEST=1`, VID:PID imposé à celui du `usb-storage` de QEMU (`46f4:0001`), phrase et mot
+      de passe de test générés à l'exécution (jamais écrits dans la cible) ; rapatriement.
+- [ ] `scripts/test-image.sh --encrypted` : saisie de la phrase au clavier virtuel (QMP `send-key`)
+      quand la question est visible à l'écran ; phrase composée de lettres identiques en AZERTY et
+      QWERTY, plus un contrôle que l'initramfs embarque la disposition `be`.
 - [ ] **Acceptation** : `make deploy-test` → `RESULT=PASS`, racine sur `dm-crypt`,
       `crypttab` avec `discard`, drapeaux de performance LUKS persistants, utilisateur
       déverrouillé, règle udev générée (VID:PID du test).
 
-## Phase 4 — CI
+## Phase 4 — CI (D-023)
 
-- [ ] Aligner sur la CI du projet Debian si `reference/debian` en contient une ; sinon garder
-      `.github/workflows/lint.yml` (lint + vérifications rapides).
-- [ ] Documenter dans `README.md` ce qui tourne en CI et ce qui reste local (build complet,
-      tests QEMU).
-- [ ] **Acceptation** : `make ci` passe localement.
+- [ ] `.github/workflows/lint.yml` : inchangé (lint à chaque push).
+- [ ] `.github/workflows/image.yml` : push sur `scripts/**`, `config/**`, `Makefile`, le workflow,
+      et `workflow_dispatch` ; runner ubuntu-24.04 ; espace disque libéré ; outils installés ; accès
+      KVM (règle udev, comme le projet Debian) ; ISO en `actions/cache` (clé = `ISO_SHA256`) ;
+      `sudo scripts/vm/build.sh …` directement sur le runner ; `make test` en utilisateur ;
+      artefacts de diagnostic (`out/logs/`, `out/test/*/serial.log`, `screen.png`, `summary.txt`) ;
+      pas d'image en artefact.
+- [ ] Documenter dans `README.md` ce qui tourne en CI et ce qui reste local (déploiement).
+- [ ] **Acceptation** : `make ci` passe localement ; le workflow `image` est vert sur GitHub dès que
+      Fabien a créé le dépôt et poussé (sinon noter dans `docs/A-FAIRE-FABIEN.md`).
 
 ## Phase 5 — Reproductibilité et rapport
 
 - [ ] `make builder-destroy && make all` depuis un clone propre (E-38).
 - [ ] `docs/RAPPORT.md` : ce qui a été fait, déviations, limites connues, durée et taille
       des artefacts, **checklist du premier démarrage natif** pour Fabien (Wi-Fi, son,
-      `lsusb -t` → `uas`, `lsblk --discard`, `fstrim -v /`, `swapon`, session GNOME,
+      `lsusb -t` → `uas`, `lsblk --discard`, `fstrim -v /`, `swapon`, session GNOME, Brave + psd
+      (`psd p`), recherche par nom, `journalctl -k | grep uas_eh` (pont SSK 090c:2320),
       démarrage sur un PC Secure Boot et un PC sans).
 - [ ] Mettre à jour `README.md` si l'usage a changé.

@@ -23,6 +23,8 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   squashfs de l'ISO (couches combinées comme le ferait l'installateur), puis configuré en chroot.
 - E-04 Dépôts Zorin/Ubuntu conservés ; `apt full-upgrade` au build ; manifeste des paquets
   (`dpkg-query`) livré avec l'image.
+- E-39 `zorin-os-census` retiré (équivaut à décocher la case « census » de l'installateur Zorin :
+  aucune installation comptée chez Zorin). (D-025)
 
 ## 3. Image produite (artefact de build, non chiffrée)
 
@@ -45,9 +47,14 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   **chemin amovible** `/EFI/BOOT/BOOTX64.EFI` (+ `grubx64.efi`, `mmx64.efi`), **sans aucune
   écriture NVRAM**. Réglages debconf persistants : `grub2/force_efi_extra_removable=true`,
   `grub2/update_nvram=false` (les mises à jour de GRUB doivent maintenir le chemin amovible).
+  `EFI/BOOT/grubx64.efi` identique au `grubx64.efi` installé (jamais la variante CD `gcdx64`) ;
+  **jamais** de `fbx64.efi` ni de `BOOTX64.CSV` dans `EFI/BOOT` (boucle de redémarrage), y compris
+  après une mise à jour de `shim-signed` (crochet APT). (D-015)
 - E-10 Démarre avec **Secure Boot activé** (clés Microsoft) **et** désactivé.
 - E-11 Menu GRUB visible 3 s (`config/rootfs/etc/default/grub.d/60-nomade.cfg`) : sur une
   machine inconnue, il faut pouvoir choisir le mode de dépannage.
+- E-41 os-prober désactivé (`GRUB_DISABLE_OS_PROBER=true`) : le menu ne liste jamais les systèmes
+  de la VM de build ni ceux du PC hôte, et `update-grub` ne sonde pas ses disques. (D-026)
 - E-12 initramfs générique : `MODULES=most`, modules `uas`, `usb_storage`, `xhci_pci` présents ;
   `RESUME=none` ; **pas d'hibernation**.
 - E-13 **Aucun pilote graphique propriétaire** (pas de `nvidia-driver-*`) ; Mesa/nouveau.
@@ -75,12 +82,19 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
 - E-22 journald **persistant** plafonné à 200 Mo (diagnostic sur matériel inconnu).
 - E-23 dpkg en `force-unsafe-io` (la clé n'est jamais arrachée).
 - E-24 `fstrim.timer` actif.
-- E-25 `profile-sync-daemon` activé globalement pour les sessions utilisateur (Firefox).
-- E-26 GNOME : indexation de contenu (Tracker / LocalSearch) **désactivée** sans casser la
-  recherche par nom ; GNOME Logiciels ne télécharge pas les mises à jour en arrière-plan ;
+- E-25 `profile-sync-daemon` activé globalement pour les sessions utilisateur, avec une
+  définition pour **Brave**, le navigateur de Zorin 18.1 (Zorin ne livre pas Firefox, et psd 6.50
+  ne connaît pas Brave) : profil `~/.config/BraveSoftware/Brave-Browser` en RAM. (D-021)
+- E-26 GNOME : indexation de contenu (Tracker 3 / LocalSearch) **désactivée** sans casser la
+  recherche par nom (noms de fichiers indexés, extraction du texte coupée : `max-bytes=0`) ;
+  GNOME Logiciels ne télécharge pas les mises à jour en arrière-plan ;
   base dconf système `local` active (le profil `/etc/dconf/profile/user` doit l'inclure —
-  fusionner avec l'existant s'il y en a un).
-- E-27 snapd retiré **si** aucun snap n'est installé par défaut (à vérifier en phase 0).
+  fusionner avec l'existant s'il y en a un ; absent dans Zorin 18.1). (D-020)
+- E-27 snapd retiré (vérifié en phase 0 : aucun snap installé par défaut), avec
+  `gnome-software-plugin-snap`. (D-027)
+- E-40 Services inutiles sur une clé nomade désactivés : `smartd`/`smartmontools`,
+  `NetworkManager-wait-online`, `whoopsie`, `kerneloops`, `ModemManager`. Les mises à jour de
+  sécurité automatiques (`unattended-upgrades`) restent actives. (D-022, D-024)
 
 ## 7. Déploiement sur la clé (réservé à Fabien, testé par Claude sur fichier)
 
@@ -95,6 +109,7 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   **sur la cible** (chiffrement en place ou recréation, au choix, à documenter) ; phrase de passe
   saisie par Fabien ; `discard` dans `crypttab` ; drapeaux persistants
   `--perf-no_read_workqueue --perf-no_write_workqueue --allow-discards` ; /boot reste en clair.
+  La phrase de passe se tape en **clavier belge** dès l'initramfs (`KEYMAP=y`).
 - E-31 Mot de passe de `TARGET_USER` saisi au déploiement.
 - E-32 Détection du pont USB de la clé (VID:PID) et écriture dans la cible de
   `/etc/udev/rules.d/60-nomade-usb.rules` à partir de `config/templates/60-nomade-usb.rules.in` :
@@ -111,11 +126,15 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   L'autotest embarqué (`nomade-selftest.service`) ne s'exécute que dans une VM signalée par
   `fw_cfg` (`opt/nomade/selftest`) et écrit ses résultats sur le port série
   (`NOMADE-SELFTEST: PASS|FAIL …`, puis `RESULT=PASS|FAIL`). Le harnais prend une capture d'écran.
-- E-36 L'autotest couvre au minimum les exigences E-02, E-07, E-09, E-10, E-12 à E-26.
-  Toute exigence vérifiable automatiquement doit y avoir une ligne.
+- E-36 L'autotest couvre au minimum les exigences E-02, E-07, E-09, E-10, E-12 à E-27 et
+  E-39 à E-41. Toute exigence vérifiable automatiquement doit y avoir une ligne.
 - E-37 `make deploy-test` : déploiement complet (chiffré) dans la VM de build vers un fichier
   creux de 64 Gio, puis démarrage de ce fichier dans QEMU sur l'hôte avec déverrouillage
-  automatisé **propre au test** (aucune trace dans un système réellement déployé).
+  automatisé **propre au test** (aucune trace dans un système réellement déployé) : phrase tapée
+  au clavier virtuel une fois la question visible.
+- E-42 CI GitHub Actions : lint à chaque push ; construction complète + `make test` (Secure Boot
+  on/off) sur les changements de scripts/configuration et à la demande ; diagnostic (journaux,
+  série, capture) en artefact, pas l'image. (D-023)
 - E-38 Reproductibilité : `make builder-destroy && make all` depuis un dépôt propre aboutit.
 
 ## 9. Hors périmètre
