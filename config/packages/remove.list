@@ -1,0 +1,8 @@
+# Paquets à purger EN PLUS du manifeste (D-014). Un nom par ligne.
+
+# E-27 / D-027 : snapd sans aucun snap installé
+snapd
+gnome-software-plugin-snap
+
+# E-39 / D-025 : équivaut à décocher la case « census » de l'installateur Zorin
+zorin-os-census

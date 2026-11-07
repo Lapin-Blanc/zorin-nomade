@@ -144,7 +144,25 @@ run_selftest() {
   [[ "$result" == PASS ]]
 }
 
+# D-016 : l'hôte n'a que 7 Gio. Si la mémoire manque pour la VM de test, la VM de build
+# (jetable, son disque est conservé) est arrêtée.
+mem_available_mb() { awk '/^MemAvailable:/ { print int($2 / 1024) }' /proc/meminfo; }
+ensure_memory() {
+  local need=$((TEST_RAM_MB + 512)) avail
+  avail="$(mem_available_mb)"
+  if ((avail < need)) && [[ -f "$BUILDER_DIR/qemu.pid" ]] \
+     && kill -0 "$(cat "$BUILDER_DIR/qemu.pid")" 2>/dev/null; then
+    log "mémoire disponible : ${avail} Mio < ${need} Mio → arrêt de la VM de build"
+    "$NOMADE_ROOT/scripts/builder.sh" down
+    avail="$(mem_available_mb)"
+  fi
+  if ((avail < need)); then
+    warn "seulement ${avail} Mio disponibles pour une VM de ${TEST_RAM_MB} Mio : l'essai risque d'échanger"
+  fi
+}
+
 mkdir -p "$OUT_DIR/test"
+ensure_memory
 case "$sb_mode" in
   both) runs=(on off) ;;
   on|off) runs=("$sb_mode") ;;

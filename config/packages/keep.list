@@ -1,0 +1,37 @@
+# Paquets de casper/filesystem.manifest-remove à GARDER (D-014, docs/iso-notes.md § 3).
+# Tout le reste du manifeste est purgé, comme le ferait Ubiquity (remove_extras) pour une
+# installation EFI en français. Un nom par ligne ; « # » commente.
+
+# Chargeur EFI (Ubiquity les garde en EFI) ; mokutil pour le diagnostic (D-028)
+grub-efi-amd64-bin
+grub-efi-amd64-signed
+shim-signed
+mokutil
+
+# Racine LUKS du déploiement, sans réseau à ce moment-là (D-028, E-30)
+cryptsetup
+cryptsetup-bin
+cryptsetup-initramfs
+keyutils
+
+# Français (E-15)
+language-pack-fr
+language-pack-fr-base
+language-pack-gnome-fr
+language-pack-gnome-fr-base
+hunspell-fr
+hunspell-fr-classical
+hyphen-fr
+mythes-fr
+libreoffice-l10n-fr
+libreoffice-help-fr
+libreoffice-help-common
+gnome-user-docs-fr
+wfrench
+
+# Anglais de repli
+language-pack-en
+language-pack-en-base
+language-pack-gnome-en
+language-pack-gnome-en-base
+libreoffice-help-en-us

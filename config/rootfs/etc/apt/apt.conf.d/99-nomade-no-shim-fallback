@@ -1,0 +1,4 @@
+// zorin-nomade (SPEC E-09, D-029) : après chaque passage de dpkg (mise à jour de shim-signed ou
+// de GRUB), EFI/BOOT redevient une copie de EFI/ubuntu, sans fbx64.efi ni BOOTX64.CSV
+// (sinon : écriture NVRAM sur le PC hôte puis redémarrage).
+DPkg::Post-Invoke { "if [ -x /usr/local/lib/nomade/efi-removable-sync.sh ]; then /usr/local/lib/nomade/efi-removable-sync.sh || true; fi"; };
