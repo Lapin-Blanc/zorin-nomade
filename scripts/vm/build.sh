@@ -222,6 +222,21 @@ step "APT : full-upgrade et purge des anciens noyaux (E-04)"
 in_chroot "${APT[@]}" full-upgrade
 in_chroot "${APT[@]}" --purge autoremove
 
+# Ubuntu garde le noyau précédent comme secours (apt-auto-removal) : on ne garde que le plus
+# récent, comme une installation neuve (place sur la clé, initramfs régénérés une seule fois).
+mapfile -t KERNELS < <(find "$R/boot" -maxdepth 1 -name 'vmlinuz-*-generic' -printf '%f\n' \
+                       | sed 's/^vmlinuz-//; s/-generic$//' | sort -V)
+if ((${#KERNELS[@]} > 1)); then
+  INSTALLED="$(installed_pkgs)"
+  old_pkgs=()
+  for v in "${KERNELS[@]:0:${#KERNELS[@]}-1}"; do
+    mapfile -t -O "${#old_pkgs[@]}" old_pkgs < <(grep -E "^linux-.*-${v//./\\.}(-generic)?$" <<<"$INSTALLED" || true)
+  done
+  log "purge des anciens noyaux : ${old_pkgs[*]}"
+  in_chroot "${APT[@]}" --purge remove "${old_pkgs[@]}"
+  in_chroot "${APT[@]}" --purge autoremove
+fi
+
 # Contrôle E-02 / E-27 / E-39 : aucun paquet live, ni snapd, ni census
 INSTALLED="$(installed_pkgs)"
 live="$(grep -E '^(casper|ubiquity.*|user-setup|.*-zorin-live|snapd|zorin-os-census.*)$' <<<"$INSTALLED" \
@@ -331,19 +346,32 @@ in_chroot update-grub
 
 E="$R/boot/efi/EFI"
 SIGNED="$R/usr/lib/grub/x86_64-efi-signed"
-[[ -d "$E/ubuntu" ]] || die "EFI/ubuntu absent après grub-install"
-cmp -s "$E/BOOT/BOOTX64.EFI" "$E/ubuntu/shimx64.efi" || die "EFI/BOOT/BOOTX64.EFI n'est pas le shim"
-cmp -s "$E/ubuntu/grubx64.efi" "$SIGNED/grubx64.efi.signed" || die "EFI/ubuntu/grubx64.efi n'est pas le GRUB signé"
-cmp -s "$E/BOOT/grubx64.efi" "$E/ubuntu/grubx64.efi" || die "EFI/BOOT/grubx64.efi différent de EFI/ubuntu"
+log "contenu de l'ESP :"
+(cd "$R/boot/efi" && find . -type f -printf '  %p %s\n' | sort) >&2
+# Dossier fournisseur produit par grub-install (« Zorin OS » sur une installation Zorin réelle)
+VENDOR=""
+for d in "$E"/*/; do
+  d="${d%/}"
+  if [[ "$d" != "$E/BOOT" && -f "$d/shimx64.efi" && -f "$d/grubx64.efi" ]]; then
+    [[ -z "$VENDOR" ]] || die "plusieurs dossiers fournisseurs dans l'ESP : ${VENDOR#"$E"/}, ${d#"$E"/}"
+    VENDOR="$d"
+  fi
+done
+[[ -n "$VENDOR" ]] || die "aucun dossier EFI/<fournisseur> avec shim et GRUB après grub-install"
+log "dossier fournisseur : EFI/${VENDOR#"$E"/}"
+cmp -s "$VENDOR/grubx64.efi" "$SIGNED/grubx64.efi.signed" || die "grubx64.efi installé n'est pas le GRUB signé"
+cmp -s "$E/BOOT/BOOTX64.EFI" "$VENDOR/shimx64.efi" || die "EFI/BOOT/BOOTX64.EFI n'est pas le shim installé"
+cmp -s "$E/BOOT/grubx64.efi" "$VENDOR/grubx64.efi" || die "EFI/BOOT/grubx64.efi différent du GRUB installé"
 if cmp -s "$E/BOOT/grubx64.efi" "$SIGNED/gcdx64.efi.signed"; then die "variante CD (gcdx64) dans EFI/BOOT"; fi
 [[ -f "$E/BOOT/mmx64.efi" ]] || die "EFI/BOOT/mmx64.efi absent"
 [[ ! -e "$E/BOOT/fbx64.efi" && ! -e "$E/BOOT/BOOTX64.CSV" ]] || die "fbx64.efi ou BOOTX64.CSV dans EFI/BOOT"
-grep -q "search.fs_uuid $U2 " "$E/ubuntu/grub.cfg" || die "EFI/ubuntu/grub.cfg ne désigne pas /boot ($U2)"
+for c in "$VENDOR/grub.cfg" "$E/BOOT/grub.cfg" "$E/ubuntu/grub.cfg"; do
+  grep -q "search.fs_uuid $U2 " "$c" || die "${c#"$R"} ne renvoie pas vers /boot ($U2)"
+done
 [[ -f "$R/boot/grub/grub.cfg" ]] || die "/boot/grub/grub.cfg absent"
 if grep -qi osprober "$R/boot/grub/grub.cfg"; then die "entrée os-prober dans grub.cfg (E-41)"; fi
 grep -q "root=UUID=$U3" "$R/boot/grub/grub.cfg" || die "grub.cfg ne désigne pas la racine par UUID"
 log "menu : $(grep -cE "^\s*menuentry " "$R/boot/grub/grub.cfg") entrées, timeout $(grep -m1 -oE 'set timeout=[0-9]+' "$R/boot/grub/grub.cfg" || echo '?')"
-(cd "$R/boot/efi" && find . -type f -printf '%p %s\n' | sort)
 
 # --------------------------------------------------------------------------------------------
 step "Manifeste et nettoyage"

@@ -177,3 +177,31 @@ Vérifié en phase 0 : snapd 2.73 installé mais aucun snap (ni seed ni snap ins
 Le manifeste les retire. `mokutil` (gardé par Ubiquity en EFI) sert au diagnostic
 (`mokutil --sb-state`) sur un PC inconnu ; `cryptsetup`, `cryptsetup-initramfs`, `keyutils` sont
 nécessaires à la racine LUKS du déploiement (E-30), sans réseau au moment du déploiement.
+
+## D-029 — GRUB : installation Ubuntu dans `EFI/ubuntu`, puis `EFI/BOOT` resynchronisé
+2026-11-07 · retenue
+Constaté en phase 1 (essai de `grub-install` dans un chroot jetable) : le `grub-install` de
+Zorin 18.1 (Ubuntu) n'a pas l'option `--force-extra-removable` (option Debian) ; par défaut, il
+installe dans `EFI/ubuntu` (le préfixe `/EFI/ubuntu` est codé en dur dans le `grubx64.efi` signé,
+donc ce dossier est obligatoire) et copie dans `EFI/BOOT` le shim, `mmx64.efi` et `fbx64.efi`,
+**mais pas `grubx64.efi`** : shim lancerait alors `fbx64.efi` (entrée NVRAM puis redémarrage).
+Avec `--removable`, c'est la variante CD `gcdx64` qui va dans `EFI/BOOT` (invite `grub>`).
+Décision : `grub-install --target=x86_64-efi --efi-directory=/boot/efi --uefi-secure-boot
+--no-nvram`, puis `/usr/local/lib/nomade/efi-removable-sync.sh` refait de `EFI/BOOT` une copie de
+`EFI/ubuntu` (shim → `BOOTX64.EFI`, `grubx64.efi`, `mmx64.efi`, `grub.cfg`) sans `fbx64.efi` ni
+`BOOTX64.CSV`. Le crochet APT `99-nomade-no-shim-fallback` appelle ce script après chaque passage
+de dpkg, ce qui maintient le chemin amovible lors des mises à jour de shim ou de GRUB sur la clé.
+Les réglages debconf de E-09 sont posés quand même (sans effet nuisible). Contrôles bloquants au build.
+
+## D-030 — Liste des paquets du manifeste gardés : 26 paquets explicites
+2026-11-07 · retenue
+`docs/iso-notes.md` annonçait 29 paquets gardés mais n'en nommait que 26 (chargeur, chiffrement,
+français, anglais de repli). La liste versionnée (`config/packages/keep.list`) reprend ces 26 noms :
+les variantes anglaises de LibreOffice (`l10n-en-gb`, `l10n-en-za`, `help-en-gb`) n'ont pas
+d'utilité pour une clé en `fr_BE`. À revoir si `check-language-support -l fr` (phase 2) propose
+un paquet retiré.
+
+## D-031 — Deux images gardées dans `out/`
+2026-11-07 · retenue
+Chaque image occupe ~10 Gio sur l'hôte ; `scripts/build-image.sh` ne garde que les
+`KEEP_IMAGES=2` plus récentes (paramètre de `config/project.env`). Elles sont reconstructibles.

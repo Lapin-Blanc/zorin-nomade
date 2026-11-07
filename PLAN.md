@@ -57,10 +57,11 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
       `nomade-selftest.service`.
 - [ ] initramfs (E-12) : `RESUME=none` (overlay ; `MODULES=most` déjà par défaut),
       `update-initramfs -u -k all` après la purge de casper.
-- [ ] GRUB (E-09, E-11, E-41) : `grub-install --target=x86_64-efi --efi-directory=/boot/efi
-      --uefi-secure-boot --no-nvram --force-extra-removable` (relever le dossier `EFI/<id>` produit
-      avec `GRUB_DISTRIBUTOR=Zorin`), `update-grub` ; contrôles bloquants : `BOOTX64.EFI` = shim,
-      `EFI/BOOT/grubx64.efi` identique à `EFI/<id>/grubx64.efi`, `mmx64.efi` présent, pas de
+- [ ] GRUB (E-09, E-11, E-41, D-029) : `grub-install --target=x86_64-efi --efi-directory=/boot/efi
+      --uefi-secure-boot --no-nvram` (Ubuntu : pas de `--force-extra-removable`, dossier
+      `EFI/ubuntu` imposé par le GRUB signé), puis `efi-removable-sync.sh` (aussi crochet APT),
+      `update-grub` ; contrôles bloquants : `BOOTX64.EFI` = shim,
+      `EFI/BOOT/grubx64.efi` identique à `EFI/ubuntu/grubx64.efi`, `mmx64.efi` présent, pas de
       `fbx64.efi`/`BOOTX64.CSV`, `grub.cfg` atteignable depuis `EFI/BOOT`, aucune entrée `osprober`.
 - [ ] Nettoyage : `apt-get clean`, démontage du cache, `resolv`, `/tmp`, journaux ; `fstrim` de
       l'ESP ; démontage strict puis `e2fsck -f -p -E discard` des deux ext4 ; « blocs alloués » affiché.
