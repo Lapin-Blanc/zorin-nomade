@@ -170,3 +170,9 @@ mis `/dev/kvm` en 0666 avant la construction ; pendant le `full-upgrade` dans le
 `/dev` du runner, monté dans le chroot, et l'utilisateur du runner perd l'accès. Sans effet dans la VM de
 build (les tests tournent sur l'hôte). Correction : l'étape KVM passe juste avant `make test` et
 vérifie l'accès.
+
+## 2026-11-08 13:40 — CI `image` verte
+Run 42480117641 (commit `a078949`) : construction 6 min, `make test` → `RESULT=PASS` avec Secure Boot
+activé (78 s) et désactivé (72 s), 107 contrôles dont les nouveaux E-25 (`/run/user` à 25 %) et E-43
+(3 unités masquées) ; capture : écran de connexion GNOME. Reste `make deploy-test` sur l'hôte (contrôle
+E-30 des inodes, essai de TRIM aux deux passages) avant la fusion de la PR #1.

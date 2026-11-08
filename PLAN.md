@@ -163,11 +163,10 @@ Fabien (mesures et constats : `docs/JOURNAL.md`). Branche `correctifs-cle`, pré
 - [x] Correctifs à chaud sur la clé (D-040, D-042, règle udev `provisioning_mode=unmap`,
       `DEPLOY_DISCARD=1`) ; GNOME Logiciels sans lancement automatique (`~/.config/autostart`).
       Vérifiés après redémarrage : unités masquées, `/run/user/1000` à 1,8 Gio, Logiciels absent.
-- [ ] Pousser la branche dès que GitHub répond — **avant tout redéploiement** (il efface la clé,
-      `/home` et ce clone compris).
-- [ ] Sur l'hôte : `make lint`, `make ci`, `make image`, `make test`, `make deploy-test` ; vérifier les
-      nouvelles lignes (E-25, E-30, E-43) et « TRIM : essai réussi » aux deux passages ; fusionner
-      dans `main`.
+- [x] Branche poussée, PR #1 ; CI `lint` et `image` vertes (`make test` : 107 contrôles, Secure Boot
+      activé et désactivé ; accès à KVM rétabli après la construction).
+- [ ] Sur l'hôte : `make deploy-test` (absent de la CI) ; vérifier « TRIM : essai réussi » aux deux
+      passages et la ligne E-30 « racine recréée à 65536 octets par inode » ; fusionner dans `main`.
 - [ ] Image : GNOME Logiciels sans service résident, sans écraser `/etc/xdg/autostart` du squashfs
       (méthode à choisir et à consigner).
 - [ ] Facultatif : initramfs sans pilotes réseau de serveur ni leurs firmwares (≈ 30 Mo sur 83,
