@@ -161,3 +161,12 @@ Script lancé par Fabien, puis redémarrage de la clé : `secureboot-db.service`
 `provisioning_mode=unmap` ; `DEPLOY_DISCARD=1` annoté ; GNOME Logiciels absent de la session.
 Deuxième démarrage : firmware 11,7 s, GRUB 7,4 s, noyau 11,2 s (phrase LUKS comprise), espace
 utilisateur 10,0 s.
+
+## 2026-11-08 13:25 — CI `image` : premier run sur GitHub (PR #1)
+Lint vert. Construction réussie sur le runner en 6 min (`masqués : secureboot-db.service fwupd.service
+fwupd-refresh.timer`), mais `make test` refuse : « /dev/kvm inaccessible ». L'étape KVM du workflow avait
+mis `/dev/kvm` en 0666 avant la construction ; pendant le `full-upgrade` dans le chroot, le postinst de
+`udev` lance `systemd-tmpfiles --create static-nodes-permissions.conf` (`z /dev/kvm 0660 - kvm -`) sur le
+`/dev` du runner, monté dans le chroot, et l'utilisateur du runner perd l'accès. Sans effet dans la VM de
+build (les tests tournent sur l'hôte). Correction : l'étape KVM passe juste avant `make test` et
+vérifie l'accès.
