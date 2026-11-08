@@ -64,3 +64,20 @@ essais atteignent `graphical.target` et l'écran de connexion GNOME (captures v�
 chacun ; restent E-21 (`/tmp` en tmpfs) et E-26 (dconf), prévus en phase 2. Journal `-p err` vide.
 Phase 1 terminée. Note : mémoire de l'hôte de nouveau juste (2,8 Gio libres après arrêt de la VM
 de build), l'essai a quand même tenu.
+
+## 2026-11-08 09:45 — phase 2 / réglages et autotest
+Ajouts au build : `tmp.mount` (D-038), psd global, profil dconf `user` + `dconf update` (valeurs
+relues par `gsettings` au build), E-40 (`systemctl disable`), `check-language-support -l fr` (rien à
+installer), manifeste copié dans `/etc/nomade/packages.manifest`. Overlay : définition psd Brave,
+profil dconf, `conf.d/60-nomade-keymap`. Autotest étendu (E-04, E-08, E-09 complet, E-11, E-15, E-17,
+E-20, E-22, E-25 à E-27, E-39 à E-41) et contrôles « clé déployée » pour la phase 3.
+Trois faux départs : (1) lien psd absolu testé par `-e` hors chroot → `-L` ; psd était déjà activé
+globalement par son paquet ; (2) `lsinitramfs | grep -q` sous `pipefail` (SIGPIPE) → variable ;
+(3) `KEYMAP=y` sans effet sous Ubuntu, le crochet `console_setup` embarque toujours la disposition →
+contrôle sur `cached_UTF-8_del.kmap.gz` (D-034). `whoopsie.service` est « static » (déclenché par
+`whoopsie.path`) : l'autotest l'admet s'il est inactif.
+
+## 2026-11-08 09:56 — phase 2 / acceptation
+Build en 10 min, image 6,8 Gio alloués. `make test` : `RESULT=PASS` avec Secure Boot activé et
+désactivé, 103 contrôles chacun, journal `-p err` vide, écran de connexion GNOME (en français).
+Phase 2 terminée. Les contrôles « clé déployée » sont en place pour la phase 3.

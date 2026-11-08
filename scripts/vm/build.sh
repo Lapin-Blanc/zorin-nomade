@@ -344,6 +344,56 @@ if [[ "$default_target" != graphical.target ]]; then
 fi
 log "cible par défaut : $(in_chroot systemctl get-default)"
 
+# --------------------------------------------------------------------------------------------
+step "Réglages de réactivité, services et langue (E-15, E-19 à E-27, E-40)"
+# E-21 : /tmp en tmpfs. Unité fournie par systemd mais non activée sous Ubuntu (iso-notes § 5) :
+# copie dans /etc (méthode documentée par Ubuntu), puis activation.
+[[ -f "$R/usr/share/systemd/tmp.mount" ]] || die "/usr/share/systemd/tmp.mount absent (E-21)"
+[[ ! -e "$R/etc/systemd/system/tmp.mount" ]] || die "/etc/systemd/system/tmp.mount déjà présent (inattendu)"
+install -m 644 "$R/usr/share/systemd/tmp.mount" "$R/etc/systemd/system/tmp.mount"
+in_chroot systemctl enable tmp.mount
+
+# E-25 (D-021) : psd pour toutes les sessions utilisateur (définition Brave fournie par l'overlay).
+# Le paquet l'active déjà globalement ; la commande est gardée pour ne pas en dépendre.
+in_chroot systemctl --global enable psd.service
+# lien absolu (vers /usr/lib/…) : -L, sinon il serait résolu hors du chroot
+[[ -L "$R/etc/systemd/user/default.target.wants/psd.service" ]] || die "psd non activé (E-25)"
+
+# E-26 (D-020) : base dconf « local » compilée (profil user fourni par l'overlay)
+in_chroot dconf update
+[[ -f "$R/etc/dconf/db/local" ]] || die "base dconf local non compilée (E-26)"
+dconf_is() {
+  local v
+  v="$(in_chroot env HOME=/nonexistent DCONF_PROFILE=user gsettings get "$1" "$2" 2>/dev/null || true)"
+  [[ "$v" == "$3" ]] || die "dconf : $1 $2 vaut « $v » au lieu de $3 (E-26)"
+}
+dconf_is org.freedesktop.Tracker3.Extract max-bytes 0
+dconf_is org.gnome.software download-updates false
+dconf_is org.gnome.desktop.input-sources sources "[('xkb', '$TARGET_KEYMAP')]"
+
+# E-40 (D-024) : services inutiles sur une clé nomade (désactivés, pas désinstallés)
+for u in smartd.service smartmontools.service NetworkManager-wait-online.service \
+         whoopsie.service whoopsie.path kerneloops.service ModemManager.service; do
+  if [[ -n "$(in_chroot systemctl list-unit-files --no-legend "$u" 2>/dev/null)" ]]; then
+    in_chroot systemctl disable "$u" 2>&1 | sed 's/^/  /' >&2
+    log "désactivé : $u ($(in_chroot systemctl is-enabled "$u" 2>/dev/null || true))"
+  else
+    log "absent : $u"
+  fi
+done
+
+# E-15 : paquets de langue complets. check-language-support compare l'installé aux paquets
+# disponibles ; tout ce qu'il propose après la purge est installé (normalement rien, D-030).
+mapfile -t LANG_PKGS < <(in_chroot check-language-support -l "${TARGET_LOCALE%%_*}" | tr ' ' '\n' | awk NF)
+if ((${#LANG_PKGS[@]})); then
+  log "check-language-support propose : ${LANG_PKGS[*]} → installation"
+  in_chroot "${APT[@]}" install "${LANG_PKGS[@]}"
+  rest="$(in_chroot check-language-support -l "${TARGET_LOCALE%%_*}")"
+  [[ -z "$rest" ]] || die "check-language-support propose encore : $rest (E-15)"
+else
+  log "check-language-support -l ${TARGET_LOCALE%%_*} : rien à installer"
+fi
+
 # L'overlay doit être intact après la transaction APT
 while IFS= read -r -d '' f; do
   cmp -s "$f" "$R/${f#"$NOMADE_ROOT/config/rootfs/"}" \
@@ -353,6 +403,14 @@ done < <(find "$NOMADE_ROOT/config/rootfs" -type f -print0)
 # --------------------------------------------------------------------------------------------
 step "initramfs (E-12)"
 in_chroot update-initramfs -u -k all
+# Disposition console « be » embarquée pour la phrase LUKS (E-30, D-034) : sous Ubuntu, le crochet
+# console_setup copie toujours la disposition préparée par « setupcon --save-only ».
+for i in "$R"/boot/initrd.img-*; do
+  content="$(in_chroot lsinitramfs "/boot/${i##*/}")"     # pas de « | grep -q » sous pipefail
+  for f in etc/console-setup/cached_UTF-8_del.kmap.gz etc/default/keyboard; do
+    grep -qx "$f" <<<"$content" || die "${i##*/} n'embarque pas $f (disposition clavier, D-034)"
+  done
+done
 
 # --------------------------------------------------------------------------------------------
 step "GRUB et chemin amovible (E-09, E-11, E-41, D-029)"
@@ -408,7 +466,9 @@ log "menu : $(grep -cE "^\s*menuentry " "$R/boot/grub/grub.cfg") entrées, timeo
 # --------------------------------------------------------------------------------------------
 step "Manifeste et nettoyage"
 in_chroot dpkg-query -W -f='${Package}\t${Version}\n' >"$OUT/$NAME.manifest"
-log "manifeste : $(wc -l <"$OUT/$NAME.manifest") paquets"
+# E-04 : le manifeste voyage aussi avec le système (diagnostic sur la clé)
+install -m 644 "$OUT/$NAME.manifest" "$R/etc/nomade/packages.manifest"
+log "manifeste : $(wc -l <"$OUT/$NAME.manifest") paquets (copie dans /etc/nomade/packages.manifest)"
 # Démonter le cache AVANT apt-get clean : il est partagé entre les builds (hors image).
 umount "$R/var/cache/apt/archives"
 in_chroot apt-get clean

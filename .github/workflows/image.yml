@@ -1,0 +1,121 @@
+# Construit l'image zorin-nomade et la teste dans QEMU (Secure Boot activé puis désactivé),
+# comme « make image && make test » en local, mais directement sur le runner (root et KVM
+# disponibles : pas de VM de build). SPEC E-42, DECISIONS D-017 et D-023.
+# Pas d'image en artefact (plusieurs Gio) : journaux, sortie série et captures seulement.
+# Le déploiement (scripts/deploy.sh) ne tourne jamais en CI.
+name: image
+
+on:
+  push:
+    paths:
+      - 'scripts/**'
+      - 'config/**'
+      - 'Makefile'
+      - '.github/workflows/image.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash          # bash -eo pipefail : un échec de build.sh n'est pas masqué par grep
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Libérer de l'espace disque
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          df -h /
+
+      - name: Outils de construction et de test
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq squashfs-tools gdisk dosfstools e2fsprogs bmap-tools zstd \
+            qemu-system-x86 qemu-utils ovmf shellcheck
+
+      - name: Accès à KVM pour l'utilisateur du runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: Lint et garde-fous
+        run: make ci
+
+      - name: Empreinte de l'ISO (clé du cache)
+        id: iso
+        run: |
+          # shellcheck disable=SC1091
+          source config/iso.env
+          echo "sha256=$ISO_SHA256" >> "$GITHUB_OUTPUT"
+          echo "file=cache/$(basename "$ISO_URL")" >> "$GITHUB_OUTPUT"
+
+      - name: ISO en cache
+        id: iso-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.iso.outputs.file }}
+          key: iso-${{ steps.iso.outputs.sha256 }}
+
+      - name: Télécharger et vérifier l'ISO
+        run: make iso
+
+      # Enregistrée tout de suite : un échec de construction ne doit pas forcer un nouveau
+      # téléchargement de 3,9 Go au prochain essai.
+      - name: Mettre l'ISO en cache
+        if: steps.iso-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.iso.outputs.file }}
+          key: iso-${{ steps.iso.outputs.sha256 }}
+
+      - name: Construire l'image (root, sur le runner)
+        run: |
+          mkdir -p out/logs
+          stamp="$(date +%Y%m%d-%H%M)"
+          sudo scripts/vm/build.sh --iso "${{ steps.iso.outputs.file }}" --out out \
+            --cache "$RUNNER_TEMP/apt-cache" --stamp "$stamp" --commit "${GITHUB_SHA::7}" \
+            2>&1 | tee "out/logs/build-$stamp.log" | grep --line-buffered -E '^\[[0-9:]+\]|ATTENTION|ERREUR'
+          ls -ls out/
+
+      - name: Tester l'image (Secure Boot activé puis désactivé)
+        run: make test
+
+      - name: Synthèse
+        if: always()
+        run: |
+          cat out/test/summary.txt 2>/dev/null || echo "pas de synthèse de test"
+          {
+            echo '### Autotest'
+            echo '```'
+            cat out/test/summary.txt 2>/dev/null || echo "pas de synthèse"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Diagnostic (journaux, série, captures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic
+          path: |
+            out/logs/
+            out/test/summary.txt
+            out/test/*/serial.log
+            out/test/*/screen.png
+            out/test/*/qemu.log
+            out/*.manifest
+          if-no-files-found: ignore
+          retention-days: 14

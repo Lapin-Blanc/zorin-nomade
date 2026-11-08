@@ -1,0 +1,4 @@
+# zorin-nomade (SPEC E-25, D-021) — Brave, navigateur de Zorin 18.1 (absent de psd 6.50).
+# Profil Chromium standard de Brave ; processus /opt/brave.com/brave/brave (nom « brave »).
+DIRArr[0]="$XDG_CONFIG_HOME/BraveSoftware/Brave-Browser"
+PSNAME="brave"

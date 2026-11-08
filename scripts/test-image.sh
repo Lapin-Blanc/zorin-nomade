@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # Démarre une image dans QEMU sur l'hôte (sans root) et récupère le résultat de l'autotest.
 #
-#   test-image.sh [--image out/latest.img] [--sb on|off|both] [--timeout 900]
+#   test-image.sh [--image out/latest.img] [--sb on|off|both] [--timeout 900] [--name sb]
 #   test-image.sh --gui [--image …] [--sb on|off]      fenêtre interactive, sans autotest
+#   NOMADE_TEST_PASSPHRASE=… test-image.sh --encrypted --image out/deploy-test/stick.img --name deploy
+#       clé déployée (scripts/deploy-test.sh) : la phrase LUKS est tapée au clavier virtuel, touches
+#       d'un AZERTY belge (si l'initramfs n'était pas en « be », elle serait refusée), quand
+#       la question est à l'écran (disque USB inactif depuis 8 s), et l'autotest vérifie aussi le
+#       déploiement (fw_cfg opt/nomade/deployed=1).
 #
 # La clé est simulée en USB (qemu-xhci + usb-storage), la NVRAM UEFI est vierge à chaque
 # essai et l'image n'est jamais modifiée (surcouche qcow2 jetable). Résultats dans
-# out/test/sb-<on|off>/ : serial.log, screen.png, qemu.log ; synthèse dans out/test/summary.txt.
+# out/test/<nom>-<on|off>/ : serial.log, screen.png, qemu.log ; synthèse dans
+# out/test/summary.txt (out/test/summary-<nom>.txt si --name diffère de « sb »).
 # Les arguments QEMU contiennent des virgules à dessein :
 # shellcheck disable=SC2054
 # shellcheck source=lib.sh
@@ -18,6 +24,8 @@ require_cmd qemu-system-x86_64 qemu-img python3 timeout
 image="$OUT_DIR/latest.img"
 sb_mode=both
 gui=0
+encrypted=0
+tname=sb
 timeout_s="$TEST_TIMEOUT"
 while (($#)); do
   case "$1" in
@@ -25,6 +33,8 @@ while (($#)); do
     --sb) sb_mode="${2:?}"; shift 2 ;;
     --timeout) timeout_s="${2:?}"; shift 2 ;;
     --gui) gui=1; shift ;;
+    --encrypted) encrypted=1; shift ;;
+    --name) tname="${2:?}"; shift 2 ;;
     *) die "option inconnue : $1" ;;
   esac
 done
@@ -33,11 +43,21 @@ image="$(readlink -f "$image")"
 [[ "$image" != *[,\ ]* ]] || die "le chemin de l'image ne doit contenir ni virgule ni espace : $image"
 img_fmt=raw; [[ "$image" == *.qcow2 ]] && img_fmt=qcow2
 [[ -r /dev/kvm && -w /dev/kvm ]] || die "/dev/kvm inaccessible (make doctor)"
+[[ "$tname" =~ ^[a-z0-9-]+$ ]] || die "--name : lettres minuscules, chiffres et tirets"
+if ((encrypted)); then
+  [[ -n "${NOMADE_TEST_PASSPHRASE:-}" ]] || die "--encrypted exige NOMADE_TEST_PASSPHRASE"
+  [[ "$NOMADE_TEST_PASSPHRASE" =~ ^[a-z]+$ ]] || die "phrase de test : lettres minuscules uniquement"
+fi
+summary="$OUT_DIR/test/summary.txt"
+[[ "$tname" == sb ]] || summary="$OUT_DIR/test/summary-$tname.txt"
 
-# qmp <socket> <commande> [fichier] — client QMP minimal (screendump, quit).
+# qmp <socket> <commande> [arg] — client QMP minimal :
+#   screendump <fichier> · quit · rdops <disque> (lectures cumulées) ·
+#   type (tape $NOMADE_TEST_PASSPHRASE puis Entrée, la phrase ne passe jamais en argument ; touches
+#   physiques d'un clavier AZERTY belge : « a » = touche qcode q, « z » = w, « m » = point-virgule)
 qmp() {
   python3 -I - "$@" <<'PY'
-import json, socket, sys
+import json, os, socket, sys, time
 path, cmd = sys.argv[1], sys.argv[2]
 s = socket.socket(socket.AF_UNIX)
 s.settimeout(15)
@@ -53,6 +73,23 @@ def reply():
             return msg
 reply()  # message d'accueil
 f.write(json.dumps({"execute": "qmp_capabilities"}) + "\n"); f.flush(); reply()
+def call(req):
+    f.write(json.dumps(req) + "\n"); f.flush()
+    return reply()
+if cmd == "type":
+    azerty = {"a": "q", "q": "a", "z": "w", "w": "z", "m": "semicolon"}
+    for c in [azerty.get(c, c) for c in os.environ["NOMADE_TEST_PASSPHRASE"]] + ["ret"]:
+        r = call({"execute": "send-key", "arguments": {"keys": [{"type": "qcode", "data": c}]}})
+        if "error" in r:
+            sys.exit(r["error"].get("desc", "erreur QMP"))
+        time.sleep(0.12)
+    sys.exit(0)
+if cmd == "rdops":
+    r = call({"execute": "query-blockstats"})
+    for d in r.get("return", []):
+        if d.get("device") == sys.argv[3]:
+            print(d["stats"]["rd_operations"])
+    sys.exit(0)
 req = {"execute": cmd}
 if cmd == "screendump":
     req["arguments"] = {"filename": sys.argv[3], "format": "png"}
@@ -104,10 +141,41 @@ run_gui() {
   "${QEMU_CMD[@]}"
 }
 
+# Déverrouillage LUKS au clavier virtuel (appelée toutes les 3 s par run_selftest, variables
+# locales de l'appelant). La question est « visible » quand le disque USB n'est plus lu depuis
+# 8 s après le chargement par GRUB (initramfs en attente de la phrase) — le menu GRUB ne dure que
+# 3 s. Déverrouillée quand les lectures reprennent en masse (montage de la racine).
+unlock_step() {
+  rd="$(qmp "$dir/qmp.sock" rdops stick 2>/dev/null || echo 0)"
+  [[ "$rd" =~ ^[0-9]+$ ]] || rd=0
+  if ((rd == rd_prev && rd > 0)); then still=$((still + 3)); else still=0; fi
+  case "$lstate" in
+    locked)
+      if ((waited >= 15 && still >= 8)); then
+        qmp "$dir/qmp.sock" screendump "$dir/question.png" 2>>"$dir/qemu.log" || true
+        tries=$((tries + 1))
+        log "question LUKS (disque inactif depuis ${still}s, ${waited}s) : saisie de la phrase, essai $tries"
+        qmp "$dir/qmp.sock" type 2>>"$dir/qemu.log" || warn "saisie QMP en échec"
+        lstate=typed t_typed=$waited rd_typed=$rd still=0
+        rd_prev=$rd
+        return 0
+      fi ;;
+    typed)
+      if ((rd > rd_typed + 1000)); then
+        log "racine déverrouillée $((waited - t_typed))s après la saisie"
+        lstate=unlocked
+      elif ((waited - t_typed > 60 && still >= 8 && tries < 3)); then
+        lstate=locked
+      fi ;;
+  esac
+  rd_prev=$rd
+}
+
 # run_selftest <on|off> → 0 si RESULT=PASS
 run_selftest() {
   local sb="$1"
-  local dir="$OUT_DIR/test/sb-$sb" pid waited=0 shot=0 after_result=0 result
+  local dir="$OUT_DIR/test/$tname-$sb" pid waited=0 shot=0 after_result=0 result
+  local lstate=locked rd=0 rd_prev=-1 rd_typed=0 still=0 tries=0 t_typed=0
   rm -rf "$dir"; mkdir -p "$dir"
   build_cmd "$sb" "$dir"
   QEMU_CMD+=(
@@ -116,10 +184,14 @@ run_selftest() {
     -fw_cfg name=opt/nomade/poweroff,string=1
     -fw_cfg name=opt/nomade/expect_sb,string="$sb"
   )
+  if ((encrypted)); then
+    QEMU_CMD+=(-fw_cfg name=opt/nomade/deployed,string=1 -fw_cfg name=opt/nomade/expect_usb,string=46f4:0001)
+  fi
   log "Essai Secure Boot $sb (délai ${timeout_s}s)…"
   "${QEMU_CMD[@]}" >"$dir/qemu.log" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
+    if ((encrypted)) && [[ "$lstate" != unlocked ]]; then unlock_step; fi
     if grep -aq 'NOMADE-SELFTEST: RESULT=' "$dir/serial.log" 2>/dev/null; then
       if ((!shot)); then qmp "$dir/qmp.sock" screendump "$dir/screen.png" 2>>"$dir/qemu.log" || true; shot=1; fi
       after_result=$((after_result + 3))
@@ -135,12 +207,15 @@ run_selftest() {
   wait "$pid" 2>/dev/null || true
   rm -f "$dir/stick.qcow2"
 
+  if ((encrypted)) && [[ "$lstate" != unlocked ]]; then
+    warn "racine jamais déverrouillée (état : $lstate, $tries saisie(s)) — voir $dir/question.png"
+  fi
   result="$(grep -a 'NOMADE-SELFTEST: RESULT=' "$dir/serial.log" 2>/dev/null \
             | tail -n1 | sed 's/.*RESULT=//' | tr -d '\r' || true)"
   {
-    printf '== Secure Boot %s : %s (%ss)\n' "$sb" "${result:-AUCUN RÉSULTAT}" "$waited"
+    printf '== %s Secure Boot %s : %s (%ss)\n' "$tname" "$sb" "${result:-AUCUN RÉSULTAT}" "$waited"
     grep -a 'NOMADE-SELFTEST: FAIL' "$dir/serial.log" 2>/dev/null | sed 's/^.*NOMADE-SELFTEST: /   /' || true
-  } | tee -a "$OUT_DIR/test/summary.txt" >&2
+  } | tee -a "$summary" >&2
   [[ "$result" == PASS ]]
 }
 
@@ -171,9 +246,9 @@ esac
 
 if ((gui)); then run_gui "${runs[0]}"; exit 0; fi
 
-{ printf 'Image : %s\nDate  : %s\n' "$image" "$(date -Iseconds)"; } >"$OUT_DIR/test/summary.txt"
+{ printf 'Image : %s\nDate  : %s\n' "$image" "$(date -Iseconds)"; } >"$summary"
 status=0
 for sb in "${runs[@]}"; do run_selftest "$sb" || status=1; done
-if ((status)); then warn "au moins un essai a échoué — voir out/test/summary.txt et out/test/sb-*/serial.log"
+if ((status)); then warn "au moins un essai a échoué — voir ${summary#"$NOMADE_ROOT"/} et out/test/$tname-*/serial.log"
 else log "Tous les essais ont réussi"; fi
 exit "$status"

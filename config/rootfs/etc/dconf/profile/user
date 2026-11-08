@@ -1,0 +1,5 @@
+# zorin-nomade (SPEC E-26, D-020) — profil dconf des sessions utilisateur.
+# Absent du squashfs de Zorin 18.1 (seul « ibus » existe) : rien à fusionner.
+# Réglages de l'utilisateur d'abord, puis base système « local » (/etc/dconf/db/local.d/).
+user-db:user
+system-db:local

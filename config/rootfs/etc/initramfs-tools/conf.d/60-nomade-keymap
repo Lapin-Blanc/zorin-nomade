@@ -1,0 +1,4 @@
+# zorin-nomade (SPEC E-30, D-034) — disposition clavier de la console dans l'initramfs.
+# Sous Zorin/Ubuntu, le crochet console_setup l'embarque déjà toujours (cached_UTF-8_del.kmap.gz) ;
+# KEYMAP=y sert le crochet « keymap » de Debian, au cas où une version future l'utiliserait.
+KEYMAP=y

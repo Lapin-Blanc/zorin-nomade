@@ -1,5 +1,5 @@
-# CI légère : lint des scripts. Le build complet et les tests QEMU restent locaux
-# (ISO de plusieurs Gio, root dans une VM, KVM). À aligner en phase 4 sur la CI du projet Debian.
+# Lint et garde-fous à chaque push (SPEC E-42) : « make ci ». La construction complète et les
+# tests QEMU sont dans image.yml ; le déploiement ne tourne jamais en CI.
 name: lint
 on:
   push:
@@ -9,5 +9,5 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y shellcheck make
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck make
       - run: make ci

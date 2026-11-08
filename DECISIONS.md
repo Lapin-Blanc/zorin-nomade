@@ -227,3 +227,61 @@ firmware du PC hôte (contraire à D-008/E-09). `/usr/sbin/grub-install` est dé
 `/usr/local/lib/nomade/grub-install-no-nvram`, qui ajoute toujours `--no-nvram`. La déviation survit
 aux mises à jour de `grub2-common`. Le build réinstalle shim et GRUB par APT et échoue si la sortie
 trahit une tentative d'écriture NVRAM ou si l'enveloppe a été remplacée.
+
+## D-034 — Disposition clavier de l'initramfs : vérifiée dès l'image
+2026-11-08 · retenue
+Constaté au build : sous Zorin/Ubuntu, `KEYMAP=y` n'a pas d'effet (le crochet `keymap` de Debian
+n'existe pas) ; le crochet `console_setup` embarque **toujours** `/etc/default/keyboard` et la
+disposition préparée par `setupcon --save-only` (`etc/console-setup/cached_UTF-8_del.kmap.gz`),
+chargée par `init-top/console_setup` avant la question LUKS. Le build (et le déploiement) échouent
+si un initrd n'embarque pas ces fichiers ; l'autotest le vérifie (E-12). `KEYMAP=y` est quand même
+posé par l'overlay (`conf.d/60-nomade-keymap`), sans effet aujourd'hui, au cas où une version future
+reprendrait le crochet Debian. La saisie au clavier belge est **prouvée** par `make deploy-test` : la phrase
+contient « a », « z » et « m » et le harnais tape les touches physiques d'un AZERTY (qcode `q` pour
+« a », `w` pour « z », `semicolon` pour « m ») ; elle n'est acceptée que si l'initramfs est en `be`
+(écart à D-015, où la phrase évitait ces lettres).
+
+## D-035 — Racine chiffrée par recréation, pas par chiffrement en place
+2026-11-08 · retenue
+Le plan prévoyait `cryptsetup reencrypt --encrypt` en place (repli : recréation). Le chiffrement en
+place traite **toute** la partition, blocs libres compris : sur une clé de 1 To, ≈ 1 To lu et écrit ;
+pour `make deploy-test`, le fichier creux de 64 Gio deviendrait plein (≈ 60 Gio à rapatrier sur un
+hôte de 111 Gio). Retenu : après `bmaptool` et l'agrandissement de p3, `blkdiscard` de p3 (le clair
+copié est rendu au SSD), `luksFormat` LUKS2 (secteurs de 4 Kio, clé de volume tirée par cryptsetup sur
+la machine qui déploie), `mkfs.ext4` avec **le même UUID et la même étiquette** que la racine de
+l'image et le `mke2fs.conf` de la cible, puis `rsync -aHAXS --numeric-ids` depuis la racine de l'image
+montée en lecture seule. Seules les données utiles (≈ 6,5 Gio) sont écrites ; `fstab` (UUID, E-07) et
+`grub.cfg` (`root=UUID=…`) restent valides sans réécriture ; plus besoin de réduire puis d'agrandir.
+Conséquences : l'image doit rester accessible pendant le déploiement (c'est le cas : `out/latest.img`) ;
+la mise en garde « chiffrer avant d'agrandir » (D-015) ne s'applique plus.
+
+## D-036 — Déploiement : détails pratiques
+2026-11-08 · retenue
+- Essai de TRIM sur le premier Mio de la clé (effacé juste après) ; s'il réussit, toute la clé est
+  `blkdiscard`ée avant l'écriture (repart de zéro, E-34) et la règle udev reçoit
+  `provisioning_mode=unmap` ; sinon `wipefs -a` et règle sans cette ligne.
+- Pendant un déploiement réel, une règle udev **temporaire** dans `/run/udev/rules.d/` pose
+  `UDISKS_IGNORE=1` sur la clé (GNOME ne monte pas ses partitions au fil de l'écriture) ; retirée en fin
+  de script, même en cas d'échec. Rien n'est écrit dans `/etc` de l'hôte.
+- Phrase et mot de passe saisis deux fois, sans écho, ASCII uniquement (la console de l'initramfs ne
+  reproduit pas sûrement les caractères accentués) ; transmis à `cryptsetup`/`chpasswd` par des tubes.
+- Mappeur `nomade-root` (nom de `crypttab`) ; si ce nom est déjà pris (déploiement lancé depuis une clé
+  nomade), `nomade-root-deploy` le temps du déploiement.
+- Mode test uniquement : PBKDF argon2id allégé (64 Mio, 4 itérations) pour un déverrouillage rapide
+  dans QEMU ; le déploiement réel garde les paramètres mesurés par cryptsetup.
+
+## D-037 — Test chiffré : question détectée par l'inactivité du disque
+2026-11-08 · retenue
+Pas d'OCR et pas de console série avant l'autotest (`quiet splash`, rien à ajouter à la ligne de
+commande du système déployé) : le harnais lit par QMP les lectures cumulées du disque USB
+(`query-blockstats`). Après le chargement par GRUB, l'initramfs attend la phrase sans plus rien lire :
+« question visible » = au moins 15 s écoulées et aucune lecture depuis 8 s (le menu GRUB ne dure que
+3 s). La phrase est alors tapée par `send-key` (touches d'un AZERTY belge, D-034), une
+capture `question.png` est prise ; la reprise massive des lectures signe le déverrouillage ; trois
+essais au plus. La phrase passe par l'environnement, jamais en argument de commande.
+
+## D-038 — `/tmp` : copie de `tmp.mount` dans `/etc`
+2026-11-08 · retenue
+Méthode documentée par Ubuntu : `/usr/share/systemd/tmp.mount` copié dans `/etc/systemd/system/`
+puis activé (le build échoue si le fichier existait déjà). Une mise à jour de systemd ne modifiera pas
+la copie ; l'unité est stable depuis des années (`size=50%`, `nr_inodes=1m`).

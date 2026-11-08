@@ -56,7 +56,8 @@ deploy: ## (Fabien, avec sudo) sudo make deploy KEY=/dev/disk/by-id/usb-…
 
 all: image test ## Chaîne complète : image puis tests
 
-ci: lint ## Ce que la CI exécute
+ci: lint ## Ce que la CI exécute à chaque push : lint et garde-fous
+	@$(S)/test-guards.sh
 
 clean: ## Supprime out/ (images et résultats de test)
 	rm -rf out

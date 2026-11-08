@@ -74,19 +74,19 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
 
 ## Phase 2 — Réglages et autotest complet
 
-- [ ] E-13 (aucun pilote NVIDIA : rien à installer, contrôler), E-14 (déjà dans le squashfs).
-- [ ] E-19 à E-24 : overlay sysctl, zram (`zram-generator.conf`), `tmp.mount` copié depuis
+- [x] E-13 (aucun pilote NVIDIA : rien à installer, contrôler), E-14 (déjà dans le squashfs).
+- [x] E-19 à E-24 : overlay sysctl, zram (`zram-generator.conf`), `tmp.mount` copié depuis
       `/usr/share/systemd/` puis activé, journald, dpkg `force-unsafe-io`, `fstrim.timer` (déjà actif).
-- [ ] E-25 (D-021) : `config/rootfs/usr/share/psd/browsers/brave`, `systemctl --global enable
+- [x] E-25 (D-021) : `config/rootfs/usr/share/psd/browsers/brave`, `systemctl --global enable
       psd.service`.
-- [ ] E-26 (D-020) : créer `/etc/dconf/profile/user` (`user-db:user`, `system-db:local`), base
+- [x] E-26 (D-020) : créer `/etc/dconf/profile/user` (`user-db:user`, `system-db:local`), base
       `local` de l'overlay, `dconf update`.
-- [ ] E-40 (D-024) : `systemctl disable` de `smartd`, `smartmontools`, `NetworkManager-wait-online`,
+- [x] E-40 (D-024) : `systemctl disable` de `smartd`, `smartmontools`, `NetworkManager-wait-online`,
       `whoopsie` (+ `whoopsie.path`), `kerneloops`, `ModemManager`. Constaté en phase 1 :
       `smartmontools` est déjà purgé par le manifeste (contrôle « absent ou désactivé »).
-- [ ] E-15 : `check-language-support -l fr` vide **après** la purge (installer ce qu'il propose) ;
+- [x] E-15 : `check-language-support -l fr` vide **après** la purge (installer ce qu'il propose) ;
       E-04 : manifeste `dpkg-query` livré (`out/*.manifest` et copie dans `/etc/nomade/`).
-- [ ] Autotest (`selftest.sh`) — lignes à ajouter : E-09 (pas de `fbx64.efi`/`BOOTX64.CSV`,
+- [x] Autotest (`selftest.sh`) — lignes à ajouter : E-09 (pas de `fbx64.efi`/`BOOTX64.CSV`,
       `cmp` du `grubx64.efi` amovible, `mmx64.efi`, debconf `update_nvram=false`, `grub-install`
       dévié vers l'enveloppe `--no-nvram` (D-033), `EFI/ubuntu/grub.cfg` présent), E-25 (définition
       Brave, psd activé), E-26 (lecture `gsettings` avec `DCONF_PROFILE=user` et un `HOME` vide :
@@ -94,26 +94,26 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
       absent), E-40 (services désactivés), E-41 (`GRUB_DISABLE_OS_PROBER=true`, aucune entrée
       `osprober` dans `grub.cfg`), E-15 (`check-language-support -l fr` vide, `fr_BE.UTF-8`
       compilée), E-12 (initrd contient la disposition clavier si `KEYMAP=y`, après la phase 3).
-- [ ] **Acceptation** : `make test` → `RESULT=PASS` avec Secure Boot activé **et** désactivé.
+- [x] **Acceptation** : `make test` → `RESULT=PASS` avec Secure Boot activé **et** désactivé.
 
 ## Phase 3 — Déploiement
 
-- [ ] `scripts/deploy.sh` selon E-28 à E-34 (garde-fous de `lib.sh` obligatoires) : `bmaptool copy`,
-      puis si chiffrement : **chiffrer avant d'agrandir** — `resize2fs` de la racine à
-      `taille − 32 Mio`, `cryptsetup reencrypt --encrypt --type luks2 --reduce-device-size 32M`
-      hors ligne (méthode « en place » ; repli : recréation `luksFormat` + copie, à trancher et
-      consigner), ouverture `--persistent --perf-no_read_workqueue --perf-no_write_workqueue
-      --allow-discards` ; ensuite `sgdisk -e`, agrandissement de p3 (moins `DEPLOY_DATA_GIB`),
-      `cryptsetup resize`, `resize2fs` ; partition exFAT optionnelle.
-- [ ] Chroot de la cible : `crypttab` (`luks,discard,initramfs`), `fstab` vers `/dev/mapper/…`,
-      `KEYMAP=y` (+ `setupcon --save-only`), `update-initramfs`, `update-grub`, mot de passe de
+- [ ] `scripts/deploy.sh` selon E-28 à E-34 (garde-fous de `lib.sh` obligatoires) : secrets saisis
+      d'abord, VID:PID du pont, essai de TRIM (D-036), effacement, `bmaptool copy`, `sgdisk -e`,
+      agrandissement de p3 (moins `DEPLOY_DATA_GIB`), partition exFAT optionnelle ; si chiffrement :
+      **recréation** (D-035, au lieu du chiffrement en place) — `blkdiscard` de p3, `luksFormat`
+      LUKS2, ouverture `--persistent --perf-no_read_workqueue --perf-no_write_workqueue
+      --allow-discards`, `mkfs.ext4` au même UUID, `rsync -aHAXS` depuis la racine de l'image ;
+      sinon `resize2fs`.
+- [ ] Chroot de la cible : `crypttab` (`luks,discard,initramfs`), `fstab` inchangé (même UUID,
+      D-035), `KEYMAP=y` déjà dans l'image (D-034), `update-initramfs`, `update-grub`, mot de passe de
       l'utilisateur (`chpasswd`), règle udev depuis le modèle (VID:PID détecté ; essai de discard
       pour `provisioning_mode=unmap`), contrôles finaux (fsck, chemin amovible), checklist affichée.
 - [ ] `scripts/deploy-test.sh` (E-37) : dans la VM, fichier creux de `DEPLOY_TEST_SIZE_GIB`,
       `DEPLOY_TEST=1`, VID:PID imposé à celui du `usb-storage` de QEMU (`46f4:0001`), phrase et mot
       de passe de test générés à l'exécution (jamais écrits dans la cible) ; rapatriement.
 - [ ] `scripts/test-image.sh --encrypted` : saisie de la phrase au clavier virtuel (QMP `send-key`)
-      quand la question est visible à l'écran ; phrase composée de lettres identiques en AZERTY et
+      quand la question est visible à l'écran (disque inactif, D-037) ; touches d'un AZERTY (D-034) ; phrase composée de lettres identiques en AZERTY et
       QWERTY, plus un contrôle que l'initramfs embarque la disposition `be`.
 - [ ] **Acceptation** : `make deploy-test` → `RESULT=PASS`, racine sur `dm-crypt`,
       `crypttab` avec `discard`, drapeaux de performance LUKS persistants, utilisateur
@@ -129,6 +129,7 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
       artefacts de diagnostic (`out/logs/`, `out/test/*/serial.log`, `screen.png`, `summary.txt`) ;
       pas d'image en artefact.
 - [ ] Documenter dans `README.md` ce qui tourne en CI et ce qui reste local (déploiement).
+- [ ] `make ci` = lint + `scripts/test-guards.sh` (refus attendus des garde-fous, sans root).
 - [ ] **Acceptation** : `make ci` passe localement ; le workflow `image` est vert sur GitHub dès que
       Fabien a créé le dépôt et poussé (sinon noter dans `docs/A-FAIRE-FABIEN.md`).
 
