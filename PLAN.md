@@ -59,7 +59,7 @@ lint par shellcheck seul, puis CI GitHub.
 ## 0.2 — retours du terrain
 
 Objectif : déployer sur des clés et des PC variés (clés SSK de 128 Go reformatables) et en tirer des
-données comparables, qui feront évoluer la base avant d'outiller l'entretien des clés (0.3).
+données comparables. Les tests grandeur nature qui suivront définiront les versions suivantes.
 
 - [ ] Partition exFAT `NOMADE-DATA` active par défaut, à 10 % de la clé (`DEPLOY_DATA_PCT`, plancher
       à fixer, `DEPLOY_DATA_GIB` en surcharge, 0 : aucune) ; accessible depuis la clé sans mot de passe
@@ -76,9 +76,10 @@ données comparables, qui feront évoluer la base avant d'outiller l'entretien d
 - [ ] Image : GNOME Logiciels sans service résident, sans écraser `/etc/xdg/autostart` du squashfs
       (méthode à choisir et à consigner).
 
-## 0.3 — entretenir une clé déployée
+## Entretenir une clé déployée (sans version prévue)
 
-Repoussé après les retours du terrain (0.2), qui feront encore évoluer la base.
+Au second plan : les tests grandeur nature (0.2 et suivantes) feront encore évoluer la base et
+décideront des prochaines versions. À reprendre quand elle se sera stabilisée.
 
 - [ ] Concevoir `nomade-update` (sur la clé) : appliquer les changements de `config/rootfs/` et des
       réglages du build (unités masquées ou désactivées, dconf, sysctl…) à un système déployé, de façon

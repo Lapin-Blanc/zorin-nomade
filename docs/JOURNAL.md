@@ -213,4 +213,5 @@ CI verte, PR #2 fusionnée (`571a199`). Leçon : pour des PR empilées, changer 
 dépendante (`gh pr edit --base main`) **avant** de supprimer la branche de la première. La branche
 distante `outil-alpha` reste à supprimer (refusée par le mode automatique de Claude Code).
 Avec Fabien : 0.2 « retours du terrain » (`NOMADE-DATA` par défaut à 10 %, `nomade-diag`, rapport
-comparatif, GNOME Logiciels) ; `nomade-update` et le redéploiement sans perte repoussés en 0.3.
+comparatif, GNOME Logiciels) ; `nomade-update` et le redéploiement sans perte au second plan, sans
+version prévue : les tests grandeur nature décideront des versions suivantes.
