@@ -50,6 +50,9 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   `EFI/BOOT/grubx64.efi` identique au `grubx64.efi` installé (jamais la variante CD `gcdx64`) ;
   **jamais** de `fbx64.efi` ni de `BOOTX64.CSV` dans `EFI/BOOT` (boucle de redémarrage), y compris
   après une mise à jour de `shim-signed` (crochet APT). (D-015)
+  Sous Zorin/Ubuntu, `grub-install` n'a pas `--force-extra-removable` et les mises à jour ignorent
+  `update_nvram` : `EFI/BOOT` est resynchronisé par un script appelé par le crochet APT (D-029) et
+  `grub-install` est dévié vers une enveloppe qui impose `--no-nvram` (D-033).
 - E-10 Démarre avec **Secure Boot activé** (clés Microsoft) **et** désactivé.
 - E-11 Menu GRUB visible 3 s (`config/rootfs/etc/default/grub.d/60-nomade.cfg`) : sur une
   machine inconnue, il faut pouvoir choisir le mode de dépannage.

@@ -26,50 +26,50 @@ D-013 à D-028.
 Architecture (D-017) : `scripts/vm/*.sh` = scripts root autonomes (VM de build **ou** runner CI),
 chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exécution → rapatriement.
 
-- [ ] `config/packages.env` (ou `config/packages/*.list`) : liste à garder du manifeste (29 paquets,
+- [x] `config/packages.env` (ou `config/packages/*.list`) : liste à garder du manifeste (29 paquets,
       `docs/iso-notes.md` § 3), paquets à ajouter (`grub-efi-amd64 grub-efi-amd64-signed shim-signed
       mokutil systemd-zram-generator profile-sync-daemon`), à retirer en plus (`snapd
       gnome-software-plugin-snap zorin-os-census`).
-- [ ] `scripts/build-image.sh` (hôte) : `make builder`, envoi du dépôt (scripts + config) et de
+- [x] `scripts/build-image.sh` (hôte) : `make builder`, envoi du dépôt (scripts + config) et de
       l'ISO (si absente ou d'empreinte différente) dans `/work`, exécution de `scripts/vm/build.sh`
       sous `sudo`, journal `out/logs/build-<horodatage>.log`, rapatriement en préservant le creux.
-- [ ] `scripts/vm/build.sh` : tout dans `unshare --mount --propagation private`, nettoyage par
+- [x] `scripts/vm/build.sh` : tout dans `unshare --mount --propagation private`, nettoyage par
       `trap` (processus du chroot tués, démontages, `losetup -d`), idempotent (repart de zéro).
-- [ ] Image creuse `IMAGE_ESP_MIB + IMAGE_BOOT_MIB + IMAGE_ROOT_GIB`, GPT E-06 (`sgdisk`, types
+- [x] Image creuse `IMAGE_ESP_MIB + IMAGE_BOOT_MIB + IMAGE_ROOT_GIB`, GPT E-06 (`sgdisk`, types
       EF00/8300/8300, étiquettes), `mkfs.vfat -F 32 -n NOMADE-ESP`, `mkfs.ext4 -L nomade-boot/root`.
-- [ ] `unsquashfs` de `casper/filesystem.squashfs` directement dans la racine montée ; contenu de
+- [x] `unsquashfs` de `casper/filesystem.squashfs` directement dans la racine montée ; contenu de
       `/boot` déplacé sur p2 ; ESP sur `/boot/efi`.
-- [ ] Préparation du chroot : `/dev` (rbind, rslave), `/proc`, `/sys`, `/run` (tmpfs) avec
+- [x] Préparation du chroot : `/dev` (rbind, rslave), `/proc`, `/sys`, `/run` (tmpfs) avec
       **`run/systemd/resolve/stub-resolv.conf`** (lien `resolv.conf`, voir iso-notes § 8),
       `policy-rc.d` (101), cache APT lié depuis `/work/cache/apt` (hors image), debconf GRUB
       (`force_efi_extra_removable=true`, `update_nvram=false`) **avant** l'installation de GRUB,
       crochet APT `99-nomade-no-shim-fallback` (supprime `EFI/BOOT/fbx64.efi` et `BOOTX64.CSV`).
-- [ ] Transaction APT unique (D-014, D-025, D-027), journal de ce qui est purgé ; puis
+- [x] Transaction APT unique (D-014, D-025, D-027), journal de ce qui est purgé ; puis
       `full-upgrade` (≈ 1,7 Go la première fois, noyau 7.0) et `autoremove --purge` (ancien noyau) ;
       contrôle : aucun paquet live (`casper`, `ubiquity*`, `user-setup`, `*-zorin-live`) ni snapd.
-- [ ] Configuration : `fstab` par UUID (E-07), hostname + `127.0.1.1` (E-17), `/etc/adjtime`
+- [x] Configuration : `fstab` par UUID (E-07), hostname + `127.0.1.1` (E-17), `/etc/adjtime`
       `LOCAL` (E-16), `locale-gen` + `update-locale LANG=fr_BE.UTF-8 LANGUAGE=fr_BE:fr`, clavier
       `be` (`/etc/default/keyboard`, `setupcon --save-only`), fuseau (E-15), utilisateur UID 1000,
       groupes `adm cdrom dip lpadmin plugdev sambashare users sudo` (filtrés sur l'existant),
       compte verrouillé (E-17), `machine-id` vide.
-- [ ] Copie de l'overlay `config/rootfs/` (sans écraser un fichier existant du squashfs sans
+- [x] Copie de l'overlay `config/rootfs/` (sans écraser un fichier existant du squashfs sans
       fusion consignée), `/etc/nomade/expected.env` et `build-info` (E-08), activation de
       `nomade-selftest.service`.
-- [ ] initramfs (E-12) : `RESUME=none` (overlay ; `MODULES=most` déjà par défaut),
+- [x] initramfs (E-12) : `RESUME=none` (overlay ; `MODULES=most` déjà par défaut),
       `update-initramfs -u -k all` après la purge de casper.
-- [ ] GRUB (E-09, E-11, E-41, D-029) : `grub-install --target=x86_64-efi --efi-directory=/boot/efi
+- [x] GRUB (E-09, E-11, E-41, D-029) : `grub-install --target=x86_64-efi --efi-directory=/boot/efi
       --uefi-secure-boot --no-nvram` (Ubuntu : pas de `--force-extra-removable`, dossier
       `EFI/ubuntu` imposé par le GRUB signé), puis `efi-removable-sync.sh` (aussi crochet APT),
       `update-grub` ; contrôles bloquants : `BOOTX64.EFI` = shim,
       `EFI/BOOT/grubx64.efi` identique à `EFI/ubuntu/grubx64.efi`, `mmx64.efi` présent, pas de
       `fbx64.efi`/`BOOTX64.CSV`, `grub.cfg` atteignable depuis `EFI/BOOT`, aucune entrée `osprober`.
-- [ ] Nettoyage : `apt-get clean`, démontage du cache, `resolv`, `/tmp`, journaux ; `fstrim` de
+- [x] Nettoyage : `apt-get clean`, démontage du cache, `resolv`, `/tmp`, journaux ; `fstrim` de
       l'ESP ; démontage strict puis `e2fsck -f -p -E discard` des deux ext4 ; « blocs alloués » affiché.
-- [ ] Artefacts `out/` (E-05) : `.img`, `.bmap` (`bmaptool create`), `.manifest`, `.sha256`,
+- [x] Artefacts `out/` (E-05) : `.img`, `.bmap` (`bmaptool create`), `.manifest`, `.sha256`,
       lien `out/latest.img` ; rapatriement creux.
-- [ ] Mémoire (D-016) : `test-image.sh` vérifie la RAM disponible et arrête la VM de build si elle
+- [x] Mémoire (D-016) : `test-image.sh` vérifie la RAM disponible et arrête la VM de build si elle
       tourne et qu'il en manque.
-- [ ] **Acceptation** : `make test` → les deux essais (Secure Boot on/off) atteignent
+- [x] **Acceptation** : `make test` → les deux essais (Secure Boot on/off) atteignent
       `graphical.target`, la capture montre l'écran de connexion GNOME.
 
 ## Phase 2 — Réglages et autotest complet
@@ -82,11 +82,13 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
 - [ ] E-26 (D-020) : créer `/etc/dconf/profile/user` (`user-db:user`, `system-db:local`), base
       `local` de l'overlay, `dconf update`.
 - [ ] E-40 (D-024) : `systemctl disable` de `smartd`, `smartmontools`, `NetworkManager-wait-online`,
-      `whoopsie` (+ `whoopsie.path`), `kerneloops`, `ModemManager`.
+      `whoopsie` (+ `whoopsie.path`), `kerneloops`, `ModemManager`. Constaté en phase 1 :
+      `smartmontools` est déjà purgé par le manifeste (contrôle « absent ou désactivé »).
 - [ ] E-15 : `check-language-support -l fr` vide **après** la purge (installer ce qu'il propose) ;
       E-04 : manifeste `dpkg-query` livré (`out/*.manifest` et copie dans `/etc/nomade/`).
 - [ ] Autotest (`selftest.sh`) — lignes à ajouter : E-09 (pas de `fbx64.efi`/`BOOTX64.CSV`,
-      `cmp` du `grubx64.efi` amovible, `mmx64.efi`, debconf `update_nvram=false`), E-25 (définition
+      `cmp` du `grubx64.efi` amovible, `mmx64.efi`, debconf `update_nvram=false`, `grub-install`
+      dévié vers l'enveloppe `--no-nvram` (D-033), `EFI/ubuntu/grub.cfg` présent), E-25 (définition
       Brave, psd activé), E-26 (lecture `gsettings` avec `DCONF_PROFILE=user` et un `HOME` vide :
       `max-bytes=0`, `download-updates=false`), E-27 (snapd absent, pas de `/snap`), E-39 (census
       absent), E-40 (services désactivés), E-41 (`GRUB_DISABLE_OS_PROBER=true`, aucune entrée

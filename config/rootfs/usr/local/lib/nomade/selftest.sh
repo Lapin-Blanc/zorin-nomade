@@ -62,7 +62,9 @@ timedate_is() { [[ "$(timedatectl show -p "$1" --value 2>/dev/null)" == "$2" ]];
 user_locked() { [[ "$(passwd -S "$TARGET_USER" 2>/dev/null | awk '{ print $2 }')" == L ]]; }
 sb_state() {
   local files=(/sys/firmware/efi/efivars/SecureBoot-*)
-  [[ -e "${files[0]}" ]] || { echo unknown; return; }
+  [[ -d /sys/firmware/efi/efivars ]] || { echo unknown; return; }
+  # Variable absente : firmware sans Secure Boot (OVMF non « secboot »), donc désactivé.
+  [[ -e "${files[0]}" ]] || { echo off; return; }
   if [[ "$(od -An -t u1 -j4 -N1 "${files[0]}" | tr -d ' ')" == 1 ]]; then echo on; else echo off; fi
 }
 no_live_user() { ! getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' | grep -vqx "$TARGET_USER"; }

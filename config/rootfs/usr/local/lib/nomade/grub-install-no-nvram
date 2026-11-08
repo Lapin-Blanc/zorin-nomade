@@ -1,0 +1,11 @@
+#!/bin/sh
+# zorin-nomade (SPEC E-09, D-033) — grub-install sans aucune écriture NVRAM.
+#
+# /usr/sbin/grub-install est dévié (dpkg-divert --rename) vers /usr/sbin/grub-install.real et
+# remplacé par un lien vers ce script. Les mises à jour de GRUB et de shim appellent
+# grub-install via grub-multi-install SANS --no-nvram (le réglage debconf grub2/update_nvram n'y
+# est pas lu) : sur la clé, cela créerait une entrée de démarrage dans le firmware du PC hôte.
+for a in "$@"; do
+  if [ "$a" = --no-nvram ]; then exec /usr/sbin/grub-install.real "$@"; fi
+done
+exec /usr/sbin/grub-install.real --no-nvram "$@"

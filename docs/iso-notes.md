@@ -54,15 +54,16 @@ Crochets `target-config` : xconfig, accessibilité, `31ubuntu_driver_packages`,
    installer `grub-efi-amd64 grub-efi-amd64-signed shim-signed mokutil systemd-zram-generator
    profile-sync-daemon`, retirer `manifest-remove − LISTE_A_GARDER`, `snapd`,
    `gnome-software-plugin-snap`, `zorin-os-census`.
-2. `LISTE_A_GARDER` (29 paquets du manifeste, à mettre dans `config/`) : chargeur
+2. `LISTE_A_GARDER` (26 paquets du manifeste, `config/packages/keep.list`, D-030) : chargeur
    (`grub-efi-amd64-bin grub-efi-amd64-signed shim-signed mokutil`), chiffrement pour le déploiement
    (`cryptsetup cryptsetup-bin cryptsetup-initramfs keyutils`), français (`language-pack-fr(-base)`,
    `language-pack-gnome-fr(-base)`, `hunspell-fr`, `hunspell-fr-classical`, `hyphen-fr`, `mythes-fr`,
    `libreoffice-l10n-fr`, `libreoffice-help-fr`, `libreoffice-help-common`, `gnome-user-docs-fr`,
    `wfrench`) et anglais de repli (`language-pack-en(-base)`, `language-pack-gnome-en(-base)`,
    `libreoffice-help-en-us`).
-3. `apt-get full-upgrade`, puis purge des anciens noyaux (`apt-get autoremove --purge` : dans le
-   chroot, `uname -r` est celui de la VM, donc 6.17.0-20 est bien retiré).
+3. `apt-get full-upgrade`, puis purge des anciens noyaux. **Corrigé en phase 1** : `autoremove` ne
+   retire pas 6.17.0-20 (Ubuntu garde le noyau précédent comme secours) ; le build purge
+   explicitement les paquets `linux-*-<version>` des noyaux autres que le plus récent.
 
 ## 4. Où sont les paquets
 
@@ -185,3 +186,14 @@ Listes APT vides dans le squashfs : `apt-get update` obligatoire.
   La nôtre ne lit que `ATTRS{idVendor}`/`ATTRS{idProduct}` : `60-nomade-usb.rules` convient.
 - Pont SSK `090c:2320` : instable en UAS sur le portable HP de Fabien **pendant mkfs** (vu côté hôte) ;
   en UAS le TRIM marche. À surveiller au premier démarrage natif (`journalctl -k | grep uas_eh`).
+- **`/etc/default/grub` supprimé par la transaction de D-014** (phase 1) : géré par ucf pour
+  `grub-pc`, il disparaît à la purge de `grub-pc` ; le build le restaure (D-032).
+- **`grub-install` de Zorin/Ubuntu** (phase 1) : pas de `--force-extra-removable` ; installe dans
+  `EFI/ubuntu` et copie shim, `mmx64.efi`, `fbx64.efi` (mais pas `grubx64.efi`) dans `EFI/BOOT` ;
+  `--removable` y met `gcdx64`. Une installation Zorin réelle utilise `EFI/Zorin OS` (installateur).
+  Recette : D-029.
+- **Mises à jour de GRUB/shim et NVRAM** (phase 1) : `grub-multi-install` appelle `grub-install`
+  sans `--no-nvram` et ignore `grub2/update_nvram` → déviation de `grub-install` (D-033).
+- **Cache APT monté depuis l'extérieur** : démonter avant `apt-get clean`, sinon le cache partagé
+  entre les builds est vidé (1,7 Go retéléchargés).
+- `smartmontools` est dans `manifest-remove` : purgé comme par Ubiquity (E-40 : « absent ou désactivé »).

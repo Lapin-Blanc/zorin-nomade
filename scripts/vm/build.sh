@@ -93,7 +93,7 @@ cleanup() {
   if mountpoint -q "$ISO_MNT"; then umount "$ISO_MNT"; fi
   if [[ -n "$LOOP" ]]; then losetup -d "$LOOP"; fi
   # Jamais de rm -r ici : $R pourrait encore porter le /dev de la machine de build.
-  rm -f "$WORK/manifest-remove" "$WORK/sim.txt" "$WORK/hosts"
+  rm -f "$WORK/manifest-remove" "$WORK/sim.txt" "$WORK/hosts" "$WORK/default-grub" "$WORK/reinstall.txt"
   rmdir "$R" "$ISO_MNT" "$WORK/boot" "$WORK" 2>/dev/null
   if ((rc != 0)); then
     rm -f "$PART"
@@ -198,6 +198,11 @@ grub-efi-amd64 grub2/update_nvram boolean false
 keyboard-configuration keyboard-configuration/layoutcode string $TARGET_KEYMAP
 keyboard-configuration keyboard-configuration/xkb-keymap select $TARGET_KEYMAP
 EOF
+# D-033 : grub-install dévié vers une enveloppe qui impose --no-nvram, y compris lors des mises à
+# jour de GRUB et de shim sur la clé (grub-multi-install ignore grub2/update_nvram).
+in_chroot dpkg-divert --local --rename --divert /usr/sbin/grub-install.real --add /usr/sbin/grub-install
+ln -sfn /usr/local/lib/nomade/grub-install-no-nvram "$R/usr/sbin/grub-install"
+[[ -x "$R/usr/sbin/grub-install.real" ]] || die "dpkg-divert de grub-install inopérant"
 
 # --------------------------------------------------------------------------------------------
 step "APT : transaction unique à la manière d'Ubiquity (D-014)"
@@ -216,7 +221,18 @@ extra="$(comm -13 <(printf '%s\n' "${REMOVE[@]}" | sort -u) \
                   <(awk '/^Purg /{ print $2 }' "$WORK/sim.txt" | sed 's/:.*//' | sort -u) | tr '\n' ' ')"
 log "purgés en plus de la liste (dépendances devenues inutiles) : ${extra:-aucun}"
 log "purgés : $(printf '%s ' "${REMOVE[@]}")"
+# /etc/default/grub (réglages Zorin : quiet splash, thème, GRUB_DISTRIBUTOR) est géré par ucf pour
+# grub-pc : la purge de grub-pc le supprime alors que grub-efi-amd64 vient de le reprendre (D-032).
+[[ -f "$R/etc/default/grub" ]] || die "/etc/default/grub absent du squashfs (inattendu)"
+cp -a "$R/etc/default/grub" "$WORK/default-grub"
 in_chroot "${APT[@]}" --purge --auto-remove install "${TRANS[@]}"
+if [[ -f "$R/etc/default/grub" ]]; then
+  cmp -s "$WORK/default-grub" "$R/etc/default/grub" \
+    || warn "/etc/default/grub modifié par la transaction APT (gardé tel quel)"
+else
+  install -m 644 "$WORK/default-grub" "$R/etc/default/grub"
+  log "/etc/default/grub de Zorin restauré (supprimé par la purge de grub-pc)"
+fi
 
 step "APT : full-upgrade et purge des anciens noyaux (E-04)"
 in_chroot "${APT[@]}" full-upgrade
@@ -344,6 +360,20 @@ in_chroot grub-install --target=x86_64-efi --efi-directory=/boot/efi --uefi-secu
 in_chroot /usr/local/lib/nomade/efi-removable-sync.sh
 in_chroot update-grub
 
+# Mise à jour simulée de shim et GRUB, par APT comme sur la clé : le chemin amovible doit rester
+# cohérent (crochet APT) et aucune écriture NVRAM ne doit être tentée. La machine de build n'expose
+# pas de variables EFI au chroot : toute tentative se voit dans la sortie de grub-install.
+log "mise à jour simulée de shim-signed et grub-efi-amd64-signed"
+in_chroot "${APT[@]}" install --reinstall shim-signed grub-efi-amd64-signed >"$WORK/reinstall.txt" 2>&1 \
+  || { cat "$WORK/reinstall.txt" >&2; die "réinstallation de shim/GRUB en échec"; }
+grep -E 'Installing for|Installation finished' "$WORK/reinstall.txt" | sort | uniq -c || true
+if grep -qiE 'EFI variables|efibootmgr|nvram' "$WORK/reinstall.txt"; then
+  grep -iE 'EFI variables|efibootmgr|nvram' "$WORK/reinstall.txt" >&2
+  die "une mise à jour de GRUB/shim tente d'écrire en NVRAM (E-09, D-033)"
+fi
+[[ "$(readlink "$R/usr/sbin/grub-install")" == /usr/local/lib/nomade/grub-install-no-nvram ]] \
+  || die "l'enveloppe grub-install a été remplacée par une mise à jour"
+
 E="$R/boot/efi/EFI"
 SIGNED="$R/usr/lib/grub/x86_64-efi-signed"
 log "contenu de l'ESP :"
@@ -371,14 +401,17 @@ done
 [[ -f "$R/boot/grub/grub.cfg" ]] || die "/boot/grub/grub.cfg absent"
 if grep -qi osprober "$R/boot/grub/grub.cfg"; then die "entrée os-prober dans grub.cfg (E-41)"; fi
 grep -q "root=UUID=$U3" "$R/boot/grub/grub.cfg" || die "grub.cfg ne désigne pas la racine par UUID"
+grep -qE "^menuentry '[^']*Zorin" "$R/boot/grub/grub.cfg" \
+  || die "première entrée du menu sans « Zorin » : /etc/default/grub de Zorin non pris en compte"
 log "menu : $(grep -cE "^\s*menuentry " "$R/boot/grub/grub.cfg") entrées, timeout $(grep -m1 -oE 'set timeout=[0-9]+' "$R/boot/grub/grub.cfg" || echo '?')"
 
 # --------------------------------------------------------------------------------------------
 step "Manifeste et nettoyage"
 in_chroot dpkg-query -W -f='${Package}\t${Version}\n' >"$OUT/$NAME.manifest"
 log "manifeste : $(wc -l <"$OUT/$NAME.manifest") paquets"
-in_chroot apt-get clean
+# Démonter le cache AVANT apt-get clean : il est partagé entre les builds (hors image).
 umount "$R/var/cache/apt/archives"
+in_chroot apt-get clean
 rm -f "$R/usr/sbin/policy-rc.d" "$R/var/cache/apt/"*.bin "$R/var/cache/debconf/"*-old \
       "$R/var/lib/systemd/random-seed" "$R/root/.bash_history"
 find "$R/tmp" "$R/var/tmp" -mindepth 1 -delete
