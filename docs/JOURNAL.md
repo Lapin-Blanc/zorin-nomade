@@ -219,7 +219,8 @@ version prévue : les tests grandeur nature décideront des versions suivantes.
 ## 2026-11-08 17:00 — premier déploiement réel sur une clé SSK de 128 Go
 Par Fabien depuis `main`, image `zorin-nomade-20261108-1555` (reconstruite par lui, mêmes scripts de
 construction que l'image validée), sortie gardée par `tee`. Clé SSK « Portable SSD 128GB » : pont VIA
-VL817 `2109:0715`, SSD SATA, 10 Gbit/s négociés. Le noyau ignore UAS pour ce pont (quirk intégré,
+Labs `2109:0715` (« VL817 SATA Adaptor » pour `lsusb`, mais le VL817 est un concentrateur : probablement
+un VL715), SSD SATA, 10 Gbit/s négociés. Le noyau ignore UAS pour ce pont (quirk intégré,
 `usb-storage`) ; `rotational=1` vu par le noyau, corrigé par la règle udev. Essai de TRIM : `blkdiscard
 -f` atteint le périphérique, refusé par le pont (« Illegal Request », EIO) → `DEPLOY_DISCARD=0`, règle
 sans `provisioning_mode` ; la cause réelle s'affiche (correctif de la PR #1). Écriture `bmaptool`
@@ -228,3 +229,12 @@ contrôles du premier démarrage conformes (Fabien). Le port (USB-A ou USB-C) n'
 UAS, TRIM et vitesse maximale dépendent du pont. Correctif : `deploy.sh` relève le pilote USB
 (`DEPLOY_USB_DRIVER`) et adapte le récapitulatif, qui annonçait toujours `uas` ; `make deploy-test` vert
 (124 contrôles, Secure Boot activé et désactivé).
+
+## 2026-11-08 17:25 — table des ponts du projet Fabrique-Clé (`reference/debian`)
+Lu à la demande de Fabien : l'onglet Diagnostic de l'application Rust (`app/src/diagnostic/`,
+`docs/architecture.md`) couvre déjà une bonne part de `nomade-diag` côté clé (pilote, liaison négociée,
+TRIM, file de commandes, rotatif déclaré, ordonnanceur ; lectures directes bornées en durée ; écriture
+sur l'espace libre par fichier délié, sans effacer ; fiches lu/mesuré/déduit/non mesuré). Sa table
+`fabricants-usb.txt` corrige deux erreurs de la journée : `090c:2320` est un Silicon Motion SM2320
+(contrôleur de SSD USB natif, pas un SSD NVMe derrière un pont), `2109:0715` probablement un VL715
+(le nom `lsusb` « VL817 » désigne un concentrateur). Corrigé dans README, PLAN, CHANGELOG, A-FAIRE.

@@ -6,7 +6,7 @@ décisions). Dernière mise à jour : 2026-11-08.
 ## En cours : version 0.1.0-alpha
 
 1. ~~Déploiement réel sur une clé SSK de 128 Go~~ : fait le 2026-11-08, démarrage conforme (pont
-   VL817, sans TRIM : voir plus bas). Reste à supprimer la branche distante devenue inutile :
+   VIA Labs `2109:0715`, sans TRIM : voir plus bas). Reste à supprimer la branche distante devenue inutile :
    `git push origin --delete outil-alpha`.
 2. **Étiqueter la version** sur `main` une fois tout vert : dater la section 0.1.0-alpha de
    `CHANGELOG.md`, puis `git tag -a v0.1.0-alpha -m "zorin-nomade 0.1.0-alpha" && git push --tags`
@@ -34,9 +34,10 @@ décisions). Dernière mise à jour : 2026-11-08.
 
 ## Pont USB de la clé
 
-- Pont SSK `090c:2320` en UAS sur le HP ProBook : aucune réinitialisation constatée à l'usage (2026-11-08). En
+- Pont SSK 1 To `090c:2320` (Silicon Motion SM2320, contrôleur de SSD USB natif) en UAS sur le HP ProBook : aucune réinitialisation constatée à l'usage (2026-11-08). En
   cas de déconnexions (`uas_eh` dans le journal du noyau) : quirk `usb-storage.quirks=090c:2320:u`
   (perd UAS et TRIM).
-- Pont VIA VL817 `2109:0715` (clé SSK 128 Go, 2026-11-08) : `usb-storage` (UAS ignoré par le noyau
+- Pont VIA Labs `2109:0715` (clé SSK 128 Go, 2026-11-08 ; `lsusb` : « VL817 SATA Adaptor », probablement
+  un VL715 vers SSD SATA) : `usb-storage` (UAS ignoré par le noyau
   pour ce pont), pas de TRIM (« Illegal Request »), 10 Gbit/s négociés ; démarrage et contrôles
   conformes.

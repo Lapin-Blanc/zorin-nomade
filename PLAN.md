@@ -50,7 +50,7 @@ lint par shellcheck seul, puis CI GitHub.
       avertissements, `STRICT=1`), `config/local.env.example`, clonage HTTPS dans le README.
 - [x] CI verte sur la PR #2 (`lint`, `image`).
 - [x] Déploiement réel par Fabien sur une clé SSK de 128 Go (2026-11-08) : déploiement en 3 min 57 s,
-      démarrage et contrôles conformes. Pont VIA VL817 sans UAS ni TRIM : l'essai de TRIM est allé
+      démarrage et contrôles conformes. Pont VIA Labs `2109:0715` sans UAS ni TRIM : l'essai de TRIM est allé
       jusqu'au périphérique (`-f` efficace, vraie cause affichée), mais sa réussite depuis un vrai
       terminal reste à voir sur un pont qui accepte le TRIM.
 - [x] `deploy.sh` : pilote USB détecté (`DEPLOY_USB_DRIVER` dans `deploy-info`), récapitulatif final
@@ -70,7 +70,8 @@ données comparables. Les tests grandeur nature qui suivront définiront les ver
       à fixer, `DEPLOY_DATA_GIB` en surcharge, 0 : aucune) ; accessible depuis la clé sans mot de passe
       administrateur (`fstab` ou règle udisks, à vérifier) ; autotest et `make deploy-test`. Décision à
       consigner. Sans effet sur la clé de 1 To (pas de redéploiement).
-- [ ] `nomade-diag` sur la clé (note de conception d'abord) : versions et autotest, machine hôte
+- [ ] `nomade-diag` sur la clé (note de conception d'abord, en partant de l'onglet Diagnostic de
+      Fabrique-Clé : `reference/debian/app/src/diagnostic/`, table `fabricants-usb.txt`) : versions et autotest, machine hôte
       (modèle, firmware, Secure Boot, « Microsoft UEFI CA » dans db, GPU), clé et pont USB (UAS, vitesse,
       TRIM, réinitialisations), temps de démarrage, mémoire et écritures, erreurs ; mesures de
       performance en option et plafonnées. Anonymisé par défaut (numéros de série remplacés par une
