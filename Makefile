@@ -13,8 +13,8 @@ help: ## Affiche cette aide
 	@echo "zorin-nomade $(VERSION) — make <cible> :"
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{ printf "  %-16s %s\n", $$1, $$2 }'
 
-doctor: ## Vérifie l'hôte : outils, KVM, OVMF, garde-fous, espace disque
-	@$(S)/host-doctor.sh
+doctor: ## Vérifie l'hôte : outils, KVM, OVMF, espace disque (STRICT=1 : garde-fous Claude bloquants)
+	@$(S)/host-doctor.sh $(if $(STRICT),--strict)
 
 lint: ## shellcheck sur tous les scripts
 	@shellcheck $(S)/*.sh $(S)/bssh $$(find $(S) -mindepth 2 -name '*.sh' 2>/dev/null) \

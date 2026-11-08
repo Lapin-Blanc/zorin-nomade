@@ -71,7 +71,7 @@ vm "sudo rm -rf /work/deploy-test && mkdir -p /work/deploy-test \
     && truncate -s ${DEPLOY_TEST_SIZE_GIB}G /work/deploy-test/stick.img"
 for ((i = 1; i <= runs; i++)); do
   log "Déploiement $i/$runs dans la VM — journal : ${logf#"$NOMADE_ROOT"/}"
-  n0="$(wc -l <"$logf" 2>/dev/null || echo 0)"
+  n0=0; [[ -f "$logf" ]] && n0="$(wc -l <"$logf")"
   if ! printf '%s\n%s\n' "$PASSPHRASE" "$PASSWORD" \
        | vm "sudo env DEPLOY_TEST=1 /work/repo/scripts/deploy.sh --target /work/deploy-test/stick.img \
                --image /work/img/$name.img --usb-id 46f4:0001 --secrets-stdin" >>"$logf" 2>&1; then

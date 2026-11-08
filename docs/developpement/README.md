@@ -47,8 +47,9 @@ garde-fous de `scripts/lib.sh` (`assert_real_usb_target`, `assert_test_target`) 
 tout script qui écrit sur une cible ; `make ci` vérifie qu'ils refusent ce qu'ils doivent refuser.
 
 `make doctor` contrôle aussi que Claude ne pourrait pas obtenir root par un détour : pas de `sudo` sans
-mot de passe, compte hors des groupes `disk`, `docker`, `lxd`, `incus-admin` (`libvirt` en
-avertissement). Le compte de Fabien reste dans `docker` et `libvirt` et les règles `deny` de
+mot de passe, compte hors des groupes `disk`, `docker`, `lxd`, `incus-admin` (`libvirt` à part).
+Ces points ne concernent pas l'usage de l'outil : ce sont des avertissements `[!!]`, et
+`make doctor STRICT=1` les rend bloquants, avant une session de Claude Code en mode sans confirmation. Le compte de Fabien reste dans `docker` et `libvirt` et les règles `deny` de
 `.claude/settings.json` sont inactives (D-019) : seules les consignes de `CLAUDE.md` protègent alors
 l'hôte en mode sans confirmation.
 

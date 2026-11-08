@@ -197,3 +197,10 @@ Défaut cosmétique relevé, non corrigé : au premier passage, `deploy-test.sh:
 ou dossier » (`2>/dev/null` placé après `<"$logf"` ne couvre pas l'erreur de redirection) ; la valeur
 de repli `0` est juste. `git fetch` en SSH refusé par l'agent (clé non déverrouillée) ; les branches
 locales correspondaient déjà aux têtes des PR (vérifié avec `gh`).
+
+## 2026-11-08 15:50 — outil utilisable par simple clonage (D-045)
+`host-doctor.sh` : garde-fous Claude (sudo sans mot de passe, groupes équivalents à root) en
+avertissements, bloquants avec `--strict` (`make doctor STRICT=1`) ; vérifié sur l'hôte : code 0 sans
+`STRICT`, échec avec (groupe `docker`). `config/local.env.example` ; README : clonage HTTPS, variante
+`--branch`, étape `local.env`. `deploy-test.sh:74` : comptage des lignes du journal sans l'erreur
+cosmétique du premier passage. Feu vert de Fabien pour fusionner les PR #1 et #2 après la CI.

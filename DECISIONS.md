@@ -356,3 +356,18 @@ utilisable, pas comme le cahier des charges de sa construction par Claude. Reten
 Restent à la racine les fichiers que Claude Code et les consignes citent en permanence (`CLAUDE.md`,
 `SPEC.md`, `DECISIONS.md`, `PLAN.md`) ; `docs/JOURNAL.md`, `docs/iso-notes.md` et
 `docs/A-FAIRE-FABIEN.md` gardent leur chemin. Prochaine étape : entretien d'une clé déployée (0.2).
+
+## D-045 — Outil utilisable par simple clonage : `make doctor` et `config/local.env`
+2026-11-08 · retenue (Fabien)
+Cas d'usage visé : sur une machine Debian ou Ubuntu, cloner le dépôt, y entrer, construire et
+déployer. Trois obstacles relevés, levés avant l'étiquette 0.1.0-alpha :
+- `make doctor` échouait (« points bloquants ») pour un compte membre de `docker` ou avec sudo sans mot
+  de passe, alors que ces contrôles ne protègent que le travail avec Claude Code. Retenu : ce sont des
+  avertissements `[!!]` ; `make doctor STRICT=1` (`host-doctor.sh --strict`) les rend bloquants, et
+  `CLAUDE.md` le cite sous cette forme. Être root reste bloquant dans tous les cas.
+- Les réglages par défaut sont ceux de Fabien. Retenu : `config/local.env.example` (commenté, sans
+  secret), copié en `config/local.env` ; étape ajoutée au démarrage rapide.
+- Clonage en HTTPS dans le README (dépôt public, aucune clé SSH nécessaire), avec la variante
+  `--branch v<version>` pour une version figée.
+Écarté pour l'instant : une interface graphique (`PLAN.md`, « plus tard ») ; elle s'appuiera sur ces
+deux points. Debian reste à essayer (le README annonce la famille Ubuntu 24.04).

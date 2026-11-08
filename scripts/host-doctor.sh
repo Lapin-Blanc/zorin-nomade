@@ -1,15 +1,27 @@
 #!/usr/bin/env bash
-# Vérifie que l'hôte est prêt : outils, KVM, OVMF, garde-fous (pas de root accessible), espace.
-# Code de sortie 1 si un point bloquant est trouvé.
+# Vérifie que l'hôte est prêt : outils, KVM, OVMF, espace, port de la VM de build ; signale les
+# garde-fous du travail avec Claude Code (root accessible par un détour).
+# Code de sortie 1 si un point bloquant est trouvé. Les garde-fous Claude ne sont que des
+# avertissements, sauf avec --strict (make doctor STRICT=1) : ils deviennent alors bloquants.
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 host_guard
 load_env
 
+strict=0
+case "${1:-}" in
+  --strict) strict=1 ;;
+  "") ;;
+  *) die "option inconnue : $1 (seule option : --strict)" ;;
+esac
+
 blocking=0
+warned=0
 ok()   { printf '  [ok] %s\n' "$*"; }
 ko()   { printf '  [KO] %s\n' "$*"; blocking=1; }
 note() { printf '  [!!] %s\n' "$*"; }
+# Garde-fou Claude : bloquant en mode strict, avertissement sinon
+guard() { if ((strict)); then ko "$*"; else note "$*"; warned=1; fi; }
 
 echo "Outils"
 declare -A pkg_of=(
@@ -39,10 +51,10 @@ for f in "$OVMF_CODE_SB" "$OVMF_VARS_SB" "$OVMF_CODE" "$OVMF_VARS"; do
   if [[ -r "$f" ]]; then ok "$f"; else ko "$f introuvable (sudo apt install ovmf, ou ajuste config/local.env)"; fi
 done
 
-echo "Garde-fous : Claude Code ne doit pas pouvoir devenir root"
+echo "Garde-fous pour Claude Code (ne doit pas pouvoir devenir root) — $( ((strict)) && echo bloquants || echo avertissements, STRICT=1 pour les rendre bloquants)"
 if [[ $EUID -eq 0 ]]; then ko "exécuté en root"; fi
 if sudo -n true 2>/dev/null; then
-  ko "sudo fonctionne sans mot de passe : retire toute règle NOPASSWD (et lance « sudo -k »)"
+  guard "sudo fonctionne sans mot de passe : retire toute règle NOPASSWD (et lance « sudo -k »)"
 else
   ok "sudo exige un mot de passe"
 fi
@@ -50,7 +62,7 @@ groups_list=" $(id -nG) "
 risky=0
 for g in disk docker lxd incus-admin; do
   if [[ "$groups_list" == *" $g "* ]]; then
-    ko "membre du groupe $g (équivaut à root ou à un accès brut aux disques)"; risky=1
+    guard "membre du groupe $g (équivaut à root ou à un accès brut aux disques)"; risky=1
   fi
 done
 if [[ "$groups_list" == *" libvirt "* ]]; then
@@ -76,4 +88,9 @@ fi
 
 echo
 if ((blocking)); then echo "Des points bloquants sont à corriger."; exit 1; fi
-echo "Hôte prêt."
+if ((warned)); then
+  echo "Hôte prêt. Avertissements [!!] : ils ne concernent que le travail avec Claude Code"
+  echo "(docs/developpement/README.md)."
+else
+  echo "Hôte prêt."
+fi

@@ -50,3 +50,6 @@ Fabien et utilisée depuis le 2026-11-08. Date posée à l'étiquetage.
 ### Dépôt
 - Le dépôt devient l'outil : `README.md` en mode d'emploi, checklist `docs/premier-demarrage.md`, traces
   de la construction dans `docs/developpement/`, ce journal des versions.
+- Utilisable par simple clonage (D-045) : clonage en HTTPS, `config/local.env.example` pour régler
+  compte, langue, clavier et fuseau sans toucher au dépôt ; `make doctor` n'échoue plus sur les
+  garde-fous propres à Claude Code (avertissements, bloquants avec `STRICT=1`).

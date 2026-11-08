@@ -46,7 +46,11 @@ lint par shellcheck seul, puis CI GitHub.
 - [x] Version : `PROJECT_VERSION` (`config/project.env`), `CHANGELOG.md`, `NOMADE_VERSION` dans
       `/etc/nomade/build-info` (contrôle E-08), `DEPLOY_VERSION` dans `deploy-info`, version affichée
       par `make help`.
+- [x] Utilisable par simple clonage (D-045) : `make doctor` sans faux échec (garde-fous Claude en
+      avertissements, `STRICT=1`), `config/local.env.example`, clonage HTTPS dans le README.
 - [x] CI verte sur la PR #2 (`lint`, `image`).
+- [ ] Déploiement réel par Fabien sur une clé SSK de 128 Go (seul essai de l'essai de TRIM depuis un
+      vrai terminal), avant l'étiquette.
 - [ ] Fusion de la PR #2 après la PR #1.
 - [ ] **Acceptation** : PR #1 et PR « outil » fusionnées, `make deploy-test` vert sur l'hôte ; Fabien pose
       l'étiquette `v0.1.0-alpha` sur `main` (`git tag -a v0.1.0-alpha -m … && git push --tags`) et date

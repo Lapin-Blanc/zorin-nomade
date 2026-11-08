@@ -103,7 +103,7 @@ make test  (QEMU + OVMF sur l'hôte, sans root)  ◀──  out/*.img rapatriée
 
 ```
 make help                 # liste des cibles
-make doctor               # vérifie l'hôte (outils, KVM, OVMF, garde-fous, espace)
+make doctor STRICT=1      # vérifie l'hôte (outils, KVM, OVMF, espace) ; STRICT=1 : garde-fous Claude bloquants
 make builder              # démarre (ou crée) la VM de build
 ./scripts/bssh <cmd>      # commande dans la VM (ex. ./scripts/bssh sudo lsblk)
 ./scripts/builder.sh push <chemin-hôte> <dossier-vm>

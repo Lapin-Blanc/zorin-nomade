@@ -33,15 +33,18 @@ aléatoire 0,2 ms ; démarrage ≈ 40 s jusqu'à l'écran de connexion, firmware
                    bmap-tools cryptsetup exfatprogs gdisk rsync dosfstools
   sudo usermod -aG kvm "$USER"     # accès à /dev/kvm sans root, puis se reconnecter
   ```
-- `make doctor` vérifie les outils, KVM, OVMF, l'espace disque et les garde-fous de l'hôte. Il signale
-  aussi des points de sécurité qui ne concernent que le travail avec Claude Code (groupes `docker`,
-  `libvirt`…, voir `docs/developpement/README.md`).
+- `make doctor` vérifie les outils, KVM, OVMF, l'espace disque et le port de la VM de build ; il
+  échoue seulement sur ces points. Il signale aussi, en avertissements `[!!]`, des points de sécurité
+  qui ne concernent que le travail avec Claude Code (sudo sans mot de passe, groupes `docker`,
+  `libvirt`…) ; `make doctor STRICT=1` les rend bloquants (voir `docs/developpement/README.md`).
 
 ## Démarrage rapide
 
 ```bash
-git clone git@github.com:Lapin-Blanc/zorin-nomade.git && cd zorin-nomade
+git clone https://github.com/Lapin-Blanc/zorin-nomade.git && cd zorin-nomade
+# ou une version figée : git clone --branch v0.1.0-alpha https://github.com/Lapin-Blanc/zorin-nomade.git
 make doctor          # l'hôte est-il prêt ?
+cp config/local.env.example config/local.env   # puis y régler compte, langue, clavier, fuseau
 make image           # construit out/latest.img (10 à 20 min)
 make test            # démarre l'image dans QEMU, Secure Boot activé puis désactivé
 ls -l /dev/disk/by-id/ | grep usb          # repérer la clé (disque entier, sans « -part »)
@@ -92,6 +95,11 @@ La VM se jette sans risque (`make builder-destroy`) : rien d'important n'y vit.
 clé nomade, jamais vers le disque d'où le système a démarré.
 
 ### Paramètres principaux (`config/project.env`, surcharges dans `config/local.env`)
+
+Les valeurs par défaut sont celles de Fabien. Pour les changer sans toucher au dépôt :
+`cp config/local.env.example config/local.env`, puis décommenter les lignes voulues. Les réglages du
+système (compte, langue, clavier, fuseau) comptent au `make image` suivant ; ceux du déploiement, au
+`make deploy` suivant.
 
 | Paramètre | Défaut | Rôle |
 |---|---|---|
