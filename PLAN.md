@@ -160,9 +160,9 @@ Fabien (mesures et constats : `docs/JOURNAL.md`). Branche `correctifs-cle`, pré
 - [x] D-042 / E-43 : `secureboot-db.service`, `fwupd.service`, `fwupd-refresh.timer` masqués au build ;
       contrôles d'autotest.
 - [x] README § 5 (Secure Boot et PC « Secured-core ») ; checklist du rapport (veille, option MS UEFI CA).
-- [ ] Correctifs à chaud sur la clé (script fourni à Fabien : D-040, D-042, règle udev
-      `provisioning_mode=unmap` et `DEPLOY_DISCARD=1` corrigés) ; GNOME Logiciels sans lancement
-      automatique (fichier `~/.config/autostart`, fait).
+- [x] Correctifs à chaud sur la clé (D-040, D-042, règle udev `provisioning_mode=unmap`,
+      `DEPLOY_DISCARD=1`) ; GNOME Logiciels sans lancement automatique (`~/.config/autostart`).
+      Vérifiés après redémarrage : unités masquées, `/run/user/1000` à 1,8 Gio, Logiciels absent.
 - [ ] Pousser la branche dès que GitHub répond — **avant tout redéploiement** (il efface la clé,
       `/home` et ce clone compris).
 - [ ] Sur l'hôte : `make lint`, `make ci`, `make image`, `make test`, `make deploy-test` ; vérifier les

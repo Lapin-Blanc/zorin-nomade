@@ -154,3 +154,10 @@ exigé par `deploy-test.sh` ; `DEPLOY_INODE_RATIO=65536` (D-041) ; `logind.conf.
 masquage `secureboot-db`/`fwupd` (D-042, E-43) ; autotest + 5 contrôles ; README (Secured-core) et
 checklist (veille). Sur la clé : script à chaud fourni à Fabien (mêmes réglages + règle udev et
 `deploy-info` corrigés) ; GNOME Logiciels sans lancement automatique (`~/.config/autostart`).
+
+## 2026-11-08 13:10 — correctifs à chaud vérifiés après redémarrage
+Script lancé par Fabien, puis redémarrage de la clé : `secureboot-db.service`, `fwupd.service`,
+`fwupd-refresh.timer` masqués ; `/run/user/1000` à 1,8 Gio (25 %) ; règle udev avec
+`provisioning_mode=unmap` ; `DEPLOY_DISCARD=1` annoté ; GNOME Logiciels absent de la session.
+Deuxième démarrage : firmware 11,7 s, GRUB 7,4 s, noyau 11,2 s (phrase LUKS comprise), espace
+utilisateur 10,0 s.
