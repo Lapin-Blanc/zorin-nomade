@@ -1,9 +1,8 @@
 # Conception 0.2 — `NOMADE-DATA` par défaut, diagnostics de la clé et du système, rapport de terrain
 
-Statut : **proposition, à valider par Fabien** (2026-11-08, révisée le même jour : deux diagnostics
-distincts). Rien n'est codé. Une fois validée, les choix passent dans `DECISIONS.md` (D-046 et
-suivantes), `SPEC.md` (E-29 modifiée ; E-44 `NOMADE-DATA`, E-45 `diag-cle`, E-46 `nomade-diag`) et
-`PLAN.md` ; cette note reste comme trace de la conception.
+Statut : **questions tranchées par Fabien le 2026-11-08** (§ 8) ; décisions D-046 à D-049. Rien
+n'est codé. À l'implémentation, `SPEC.md` suit (E-29 modifiée ; E-44 `NOMADE-DATA`, E-45 `diag-cle`,
+E-46 `nomade-diag`) ; cette note reste comme trace de la conception.
 
 Deux diagnostics, deux moments :
 
@@ -149,7 +148,7 @@ ligne de commande, de l'onglet Diagnostic de Fabrique-Clé.
 make diag-cle KEY=/dev/disk/by-id/usb-…              # identification seule, sans root (≈ 2 s)
 sudo make diag-cle KEY=/dev/disk/by-id/usb-…         # par défaut avec root : + lectures directes (≈ 30 s),
                                                      # rien n'est écrit sur la clé
-sudo make diag-cle KEY=… COMPLET=1 [DUREE=3]         # analyse complète : EFFACE la clé (5 à 15 min)
+sudo make diag-cle KEY=… COMPLET=1 [DUREE=1]         # analyse complète : EFFACE la clé (≈ 3 à 5 min)
 ```
 
 `scripts/diag-cle.sh` (Bash : `load_env`, gardes de `lib.sh`, puis `python3 -I` du module commun,
@@ -181,7 +180,8 @@ déployée (la lecture seule ne la change pas).
 - TRIM **déclaré** (`discard_max_bytes`), secteurs logique et physique, transfert maximal, rotatif
   déclaré, capacité annoncée ;
 - table de partitions actuelle (clé nomade reconnue à ses noms GPT `nomade-root` / `NOMADE-DATA`).
-- **SMART**, si `smartctl` est installé sur l'hôte (facultatif, absent aujourd'hui) : `-d sat` pour
+- **SMART**, si `smartctl` est installé sur l'hôte (Fabien l'installe ; `make doctor` le signale
+  comme facultatif ; rien dans l'image, où `smartd` est désactivé) : `-d sat` pour
   un SSD SATA derrière un pont (le VL715), `-d sntjmicron|sntasmedia|sntrealtek` pour les ponts NVMe
   connus de la table. Santé, heures de fonctionnement, **volume déjà écrit**, réserve : l'usure d'une
   clé d'occasion. Pont qui ne relaie rien : « non lu ».
@@ -204,13 +204,14 @@ Protocole de `diagnostic/analyse.rs`, plus un essai de TRIM réel :
    (`DEPLOY_DISCARD`, `provisioning_mode`) ;
 3. écriture aléatoire 4 Kio, 1 puis 8 à la fois ;
 4. écritures synchronisées (`fdatasync` à chaque bloc) : ce que vivent dpkg et les navigateurs ;
-5. **longue écriture séquentielle** (`DUREE` minutes, 3 par défaut, comme les choix 1 / 3 / 10 de
-   Fabrique-Clé ; arrêt en fin de clé), courbe du débit, **chute du cache SLC** repérée ;
+5. **longue écriture séquentielle** (`DUREE` minutes, **1 par défaut** ; 3 ou 10 pour une courbe plus
+   longue, comme dans Fabrique-Clé ; arrêt en fin de clé), courbe du débit, **chute du cache SLC**
+   repérée quand elle survient dans ce délai (sinon « cache non épuisé en 1 min ») ;
 6. lecture aléatoire sur les données écrites ;
 7. remise à vide : `blkdiscard` de toute la clé si le TRIM passe, sinon premier et dernier Mio remis
    à zéro. La clé ressort sans table de partitions, prête pour `deploy`.
 
-Volume écrit : jusqu'à `DUREE` × débit (≈ 90 Go en 3 min à 500 Mo/s), sans importance pour un SSD
+Volume écrit : jusqu'à `DUREE` × débit (≈ 30 Go en 1 min à 500 Mo/s), sans importance pour un SSD
 (endurance de centaines de To), à ne pas répéter inutilement sur une clé ordinaire.
 
 ### 2.6 Verdict, rapport et lien avec `deploy`
@@ -262,6 +263,10 @@ tourne sous l'utilisateur, puis le script se relance par `sudo` pour la partie *
 réservé, `dmidecode`, journal complet, lectures directes), en lui passant le dossier de la première
 partie. Chaque section est indépendante, bornée par `timeout` (10 s) et notée « non lu » en cas
 d'échec : le diagnostic n'avorte jamais. Il affiche à la fin un résumé lisible et le chemin de l'archive.
+
+**Lanceur** « Diagnostic de la clé » dans le menu (`/usr/share/applications/nomade-diag.desktop`) :
+il ouvre un terminal qui lance `nomade-diag`, demande le mot de passe et reste ouvert à la fin sur le
+résumé et le chemin de l'archive, pour qu'un élève s'en serve sans taper de commande.
 
 Sur la clé de 1 To, qui ne sera pas redéployée, le script se lance **depuis le clone du dépôt**
 (`sudo python3 -I config/rootfs/usr/local/lib/nomade/nomade-diag.py`) : il ne dépend d'aucun fichier
@@ -332,10 +337,10 @@ sans le sel.
   `deploy-info` (`DEPLOY_CLE_EMPREINTE`), et `nomade-diag` la reprend telle quelle : le diagnostic
   d'avant et ceux d'après portent la même empreinte. Clé déployée avant la 0.2 (la 1 To) : empreinte
   calculée sur la clé, non reliable à un `diag-cle`.
-- **PC** (et périphériques) : calculée sur la clé, avec un sel propre à la clé tiré au premier
-  lancement dans `/var/lib/nomade/diag-sel` (racine chiffrée, root seul). Variante (question 3) :
-  `deploy.sh` copie le sel de l'hôte sur la clé, et un même PC garde la même empreinte d'une de tes
-  clés à l'autre.
+- **PC** (et périphériques) : calculée sur la clé avec le **sel de l'hôte**, que `deploy.sh` copie
+  dans `/var/lib/nomade/diag-sel` (racine chiffrée, root seul) : un même PC garde la même empreinte
+  d'une clé de Fabien à l'autre. Clé sans sel copié (la 1 To, `make deploy-test`) : sel tiré sur la
+  clé au premier lancement, empreintes propres à cette clé.
 
 ### 4.3 Anonymisation (par défaut)
 
@@ -531,7 +536,7 @@ et phrase de `CLAUDE.md` à élargir (« outillage de test et de diagnostic »).
    `make diag-cle`, `make diag-cle-test`, D-047, D-048 ; essai sur un loop dans la VM.
 3. **Analyse complète** (`COMPLET=1`) : capacité, TRIM réel, écritures, courbe, remise à vide ;
    contrefaçon simulée dans `make diag-cle-test` ; SPEC E-45.
-4. **`nomade-diag`, collecte et anonymisation** (sans mesures) : script, `selftest.sh --materiel`,
+4. **`nomade-diag`, collecte et anonymisation** (sans mesures) : script, lanceur, `selftest.sh --materiel`,
    numéro de série repère dans `test-image.sh`, autotest E-46, `docs/diagnostic.md` ;
    `make test`, `make deploy-test`.
 5. **Mesures de `nomade-diag`** (`--mesures`), plafonds.
@@ -544,21 +549,19 @@ et phrase de `CLAUDE.md` à élargir (« outillage de test et de diagnostic »).
 GNOME Logiciels sans service résident (dernière ligne de la 0.2 dans `PLAN.md`) reste un chantier
 séparé, indépendant de cette note.
 
-## 8. Questions pour Fabien
+## 8. Décisions de Fabien (2026-11-08)
 
-Réglé le 2026-11-08 : deux outils, `diag-cle` séparé de `deploy`, en lecture seule par défaut et
-complet sur demande.
+Deux outils, `diag-cle` séparé de `deploy`, en lecture seule par défaut et complet sur demande ; puis,
+question par question :
 
-1. **Plancher de 8 Gio** et seuil « racine ≥ `IMAGE_ROOT_GIB` + 16 Gio » : d'accord ?
-2. **Point de montage** `/media/NOMADE-DATA` (chemin fixe, montage par `fstab`), ou préfères-tu la voie
-   udisks (`/media/fabien/NOMADE-DATA`, montée au clic) ?
-3. **Empreintes des PC** : sel propre à chaque clé (deux clés sur le même PC donnent deux empreintes),
-   ou sel de l'hôte copié au déploiement (un même PC reconnu d'une de tes clés à l'autre) ?
-4. **`diagnostics/resumes/` versionné** dans le dépôt public : d'accord, ou dépôt séparé / non versionné ?
-5. Un **lanceur dans le menu** (« Diagnostic de la clé », qui ouvre un terminal), pour qu'un élève
-   lance `nomade-diag` sans taper de commande ? Ou le terminal seulement, pour l'instant ?
-6. **Mesures d'écriture de `nomade-diag`** sur la racine (chemin réel, chiffré) avec un plafond de
-   1 Gio : d'accord ?
-7. **Écriture longue de `diag-cle COMPLET=1`** : 3 min par défaut (≈ 90 Go sur un SSD rapide) ?
-8. **SMART** : installer `smartmontools` sur l'hôte (facultatif ; sans lui, `diag-cle` note « non lu ») ?
-9. **Python pour ces deux outils** (déviation à la consigne de `CLAUDE.md`) : d'accord ?
+1. Plancher de **8 Gio**, et pas de `NOMADE-DATA` si la racine passait sous 40 Gio
+   (`IMAGE_ROOT_GIB` + 16) ; pas de plafond.
+2. Montage par **`fstab`** sur **`/media/NOMADE-DATA`**, par UUID.
+3. Empreintes des PC avec le **sel de l'hôte**, copié sur la clé au déploiement.
+4. **`diagnostics/resumes/` et `docs/terrain.md` versionnés** dans le dépôt public ; archives hors de git.
+5. **Lanceur** « Diagnostic de la clé » dans le menu dès la 0.2.
+6. Écritures de `nomade-diag --mesures` sur la **racine**, plafond **1 Gio**.
+7. Écriture longue de `diag-cle COMPLET=1` : **1 min** par défaut (`DUREE=`).
+8. **`smartmontools`** installé par Fabien sur l'hôte ; `make doctor` le signale comme facultatif.
+9. **Python 3**, bibliothèque standard seule ; `CLAUDE.md` élargi à « l'outillage de test et de
+   diagnostic ».

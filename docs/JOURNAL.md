@@ -260,3 +260,11 @@ par défaut (identification sans root, lectures directes avec `sudo`, nouvelle g
 vide) ; essais sur loop et contrefaçon simulée par device-mapper dans la VM. Module Python commun aux
 deux outils ; empreinte de la clé calculée par l'hôte et transmise par `deploy-info`. `smartctl`
 absent de l'hôte (SMART facultatif).
+
+## 2026-11-08 18:45 — questions de la note tranchées (D-046 à D-049)
+Avec Fabien, une par une : plancher de 8 Gio et seuil de 40 Gio pour la racine ; `fstab` sur
+`/media/NOMADE-DATA` ; sel de l'hôte copié sur la clé ; résumés et `docs/terrain.md` versionnés ;
+lanceur dans le menu ; écritures de `nomade-diag` sur la racine, plafond 1 Gio ; écriture longue de
+`diag-cle` ramenée à **1 min** (proposé : 3) ; `smartmontools` sur l'hôte ; Python, `CLAUDE.md`
+élargi. Note, `PLAN.md`, `CLAUDE.md` et `docs/A-FAIRE-FABIEN.md` mis à jour. Prochaine étape :
+`NOMADE-DATA` (étape 1 de la note), sur feu vert.

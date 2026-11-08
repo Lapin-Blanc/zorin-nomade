@@ -5,8 +5,8 @@ décisions). Dernière mise à jour : 2026-11-08.
 
 ## En cours : version 0.2.0-alpha (branche `retours-terrain`)
 
-1. **Valider la note de conception** `docs/developpement/conception-0.2.md` (`NOMADE-DATA` par défaut,
-   `make diag-cle` avant déploiement, `nomade-diag` après, `make diag-rapport`) : questions ouvertes en fin de note. Rien n'est codé avant.
+1. **Installer `smartmontools` sur l'hôte** (D-048) : `sudo apt install smartmontools`. Sans lui,
+   `make diag-cle` note SMART « non lu ».
 2. **Sur la clé de 1 To**, points restants de `docs/premier-demarrage.md` : son, second écran, recherche
    par nom, mise en veille, première `apt full-upgrade` (puis `sudo ls /boot/efi/EFI/BOOT`), essai sur un
    PC avec Secure Boot actif (option « MS UEFI CA » si refus).

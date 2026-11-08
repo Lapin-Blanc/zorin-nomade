@@ -371,3 +371,59 @@ déployer. Trois obstacles relevés, levés avant l'étiquette 0.1.0-alpha :
   `--branch v<version>` pour une version figée.
 Écarté pour l'instant : une interface graphique (`PLAN.md`, « plus tard ») ; elle s'appuiera sur ces
 deux points. Debian reste à essayer (le README annonce la famille Ubuntu 24.04).
+
+## D-046 — `NOMADE-DATA` par défaut : 10 % de la clé, montée par `fstab`
+2026-11-08 · retenue (Fabien)
+Sur une clé reformatable, une zone d'échange lisible sous Windows et macOS sert à tout le monde, et
+`nomade-diag` y dépose ses rapports. Retenu : partition exFAT `NOMADE-DATA` créée par défaut, taille
+`max(⌊clé × DEPLOY_DATA_PCT / 100⌋, DEPLOY_DATA_MIN_GIB)` avec `DEPLOY_DATA_PCT=10` et un plancher de
+8 Gio (avec 10 %, un plancher plus bas ne jouerait jamais : une clé de 32 Go ne reçoit déjà pas
+l'image), pas de plafond ; pas de partition, avec un avertissement, si la racine passait sous
+`IMAGE_ROOT_GIB` + 16 Gio ; `DEPLOY_DATA_GIB` impose une taille, `0` supprime la partition. Montage
+par `fstab` (ligne ajoutée par `deploy.sh`) sur `/media/NOMADE-DATA`, **par UUID** (deux clés nomade
+branchées porteraient la même étiquette), `nofail`, `uid=1000` : accessible sans mot de passe ni
+polkit, chemin fixe pour les scripts. Écarté : le montage par udisks au clic (pas de chemin fixe,
+inutilisable par root, comportement de polkit sur le disque système à vérifier). `exfatprogs` ajouté
+à l'image (`fsck.exfat` au démarrage, déploiement depuis une clé nomade). Note :
+`docs/developpement/conception-0.2.md`, § 1.
+
+## D-047 — Diagnostics en Python 3, réécrits à partir de Fabrique-Clé
+2026-11-08 · retenue (Fabien)
+`diag-cle` (hôte), `nomade-diag` (clé) et `diag-rapport` (hôte) sont écrits en Python 3, bibliothèque
+standard seule, lancés par `python3 -I`, avec un module commun (`config/rootfs/usr/local/lib/nomade/
+nomade_diag/`). Déviation à `CLAUDE.md`, qui ne permettait Python que pour l'outillage de test :
+la consigne devient « outillage de test et de diagnostic ». Raisons : Python 3.12 est déjà sur l'hôte
+et dans l'image ; un seul langage pour les trois outils ; retouche possible sur la clé, sans
+compilateur ; JSON, HMAC et centiles naturels. Écartés : réutiliser le module Rust `diagnostic/` de
+Fabrique-Clé (lié à `disques`, `suivi`, `assistant` : il faudrait modifier ce projet ; Rust ≥ 1.85
+absent de Noble ; ne couvre que la clé) ; Bash + `fio` + `jq` (protocole différent de Fabrique-Clé,
+`fio` à installer partout). Repris de Fabrique-Clé, sans son code : la table `fabricants-usb.txt`
+(copiée, même format), le parcours sysfs, le protocole de mesure et d'analyse, les seuils A–D.
+L'AppImage de Fabrique-Clé sert à l'étalonnage. Note : § 6.
+
+## D-048 — Deux diagnostics : `diag-cle` avant le déploiement, `nomade-diag` après
+2026-11-08 · retenue (Fabien)
+- `make diag-cle KEY=…`, sur l'hôte, **séparé de `deploy`** : identification sans root ; avec `sudo`,
+  lectures directes par défaut, rien n'est écrit (garde `assert_usb_disk`, nouvelle, sans saisie du
+  numéro de série) ; `COMPLET=1` : analyse complète qui **efface la clé** (capacité réelle, TRIM réel,
+  écritures, écriture longue de `DUREE=1` min par défaut, remise à vide), derrière
+  `assert_real_usb_target` inchangée. SMART par `smartctl` si présent (installé par Fabien, facultatif
+  pour `make doctor`). Essais de Claude dans la VM de build seulement (`make diag-cle-test`, contrefaçon
+  simulée par device-mapper).
+- `nomade-diag`, sur la clé déployée : PC, firmware, Secure Boot, affichage, démarrage, mémoire,
+  écritures, erreurs, et la clé telle qu'elle se comporte sur ce PC ; partie session en utilisateur,
+  partie système par `sudo` ; lanceur « Diagnostic de la clé » dans le menu ; mesures en option, dont
+  des écritures sur la racine plafonnées à 1 Gio. Rapport sur `NOMADE-DATA`, sinon `~/nomade-diag/`.
+Note : § 2 et 3.
+
+## D-049 — Anonymisation, empreintes et résumés versionnés
+2026-11-08 · retenue (Fabien)
+Rapports anonymisés par défaut : `resume.json` construit sur liste blanche, fichiers bruts nettoyés
+(MAC, IP, noms), rien de personnel collecté (réseaux, session, `/home`), contrôle avant l'écriture de
+l'archive ; `--brut` / `BRUT=1` pour soi seulement. Numéros de série remplacés par une empreinte
+HMAC-SHA-256 tronquée, avec **le sel de l'hôte** (`diagnostics/.sel`, ignoré par git) : l'empreinte
+de la clé est calculée par l'hôte et transmise par `deploy-info` (`DEPLOY_CLE_EMPREINTE`), et
+`deploy.sh` copie le sel sur la clé (`/var/lib/nomade/diag-sel`, racine chiffrée), si bien qu'un même
+PC est reconnu d'une clé de Fabien à l'autre. Le sel n'entre jamais dans une image, un dépôt, un
+journal ou la CI. `diagnostics/resumes/*.json` et `docs/terrain.md` sont **versionnés** dans le dépôt
+public (historique, rapport reproductible) ; les archives complètes restent hors de git. Note : § 4 et 5.
