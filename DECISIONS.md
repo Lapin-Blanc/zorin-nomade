@@ -287,7 +287,7 @@ puis activé (le build échoue si le fichier existait déjà). Une mise à jour 
 la copie ; l'unité est stable depuis des années (`size=50%`, `nr_inodes=1m`).
 
 ## D-039 — Pas de publication de l'image (release) pour l'instant
-2026-11-08 · retenue (Fabien)
+2026-11-08 · remplacée par D-043 (Fabien) : l'argument de marque n'est plus retenu
 Contrairement au projet Debian, l'image n'est pas publiée dans une release GitHub ; D-023 est maintenu
 (CI = construction + test, diagnostics seulement). L'argument de taille ne tient pas (zstd + découpage
 sous 2 Gio comme dans le projet Debian), mais l'image est un Zorin Core **modifié** qui garde la marque
@@ -329,3 +329,13 @@ c'est contraire à l'esprit de D-008. Retenu : `secureboot-db.service`, `fwupd.s
 l'autotest). Pour mettre à jour le firmware de son propre portable, Fabien peut les démasquer
 ponctuellement (`sudo systemctl unmask fwupd.service`). Gain annexe : ≈ 47 Mio de RAM, plus de
 téléchargement LVFS. Sur la clé déployée : même masquage par le script à chaud.
+
+## D-043 — Marque Zorin : pas un frein ; l'image reste construite en local
+2026-11-08 · retenue (Fabien)
+Remplace D-039. L'argument de marque n'est plus pris en compte. L'usage du projet est marginal et
+pédagogique, et la question relève d'une zone grise, pas d'une interdiction : elle repose sur un seul
+message du forum Zorin, pas sur les conditions de Zorin elles-mêmes. La décision de fond ne change pas :
+l'image n'est pas publiée, parce qu'il n'y en a pas besoin. Elle se construit sur l'hôte (`make image`,
+10 à 20 min depuis l'ISO en cache) et `deploy.sh` la lit dans `out/latest.img`. La CI ne garde que les
+diagnostics (D-023). Une publication (zstd, découpage sous 2 Gio, release GitHub) reste possible plus
+tard si un besoin apparaît, sans obstacle de principe.
