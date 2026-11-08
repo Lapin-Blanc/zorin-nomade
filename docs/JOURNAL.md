@@ -298,3 +298,19 @@ autotest en mode matériel rapporté) et E-47 (ni série repère du disque simul
 contrôles) : archive rangée sur `NOMADE-DATA`, empreinte de la clé identique aux deux démarrages
 (reprise de `deploy-info`). Non essayés : SMART (ni `smartctl` sur l'hôte, ni pont dans la VM),
 mesures réelles. Commits `f48129f`, `5462ebe` et suivant ; rien n'est poussé.
+
+## 2026-11-08 20:45 — premiers diagnostics réels (clé de 128 Go, HP ProBook 450 G9)
+Par Fabien : `diag-cle` en lecture seule puis `COMPLET=1` sur la clé SSK de 128 Go (`2109:0715`),
+redéploiement en 0.2 (image `zorin-nomade-20261108-1920`), « Diagnostic de la clé » sur un HP ProBook
+450 G9, `make diag-rapport`. Mesures : lecture 352 Mo/s, 4 Kio 4 815 IOPS, gain ×8 1,06
+(`usb-storage` : une commande à la fois), écriture 4 Kio 14 Mo/s → catégorie C mesurée, chute du cache
+SLC après 6,2 Gio, capacité conforme, TRIM refusé par le pont (comme au déploiement). Le PC : Secure
+Boot actif, les deux CA Microsoft (2011 et 2023) dans db, i915, Wi-Fi rtw89 fonctionnel, démarrage
+15,2 + 6,7 + 14,5 (phrase comprise) + 11,9 s, aucune alerte. Empreinte de la clé identique dans les
+deux diagnostics : le lien par `deploy-info` marche. Deux défauts corrigés : (1) `diag-rapport`
+refusait le résumé `nomade-diag` pour un « courriel » qui était l'unité `user@1000.service` ; le motif
+ignore désormais les unités systemd instanciées ; (2) SMART relayé par le pont (`-d sat`, modèle « SSK
+Portable SSD 128GB »), mais l'attribut 241 (37 564) n'est pas en secteurs (18 Mio en 236 h) : valeur
+brute gardée (`ecrit_brut`), conversion seulement si l'unité est connue ou plausible ; les deux résumés
+`diag-cle` déjà rangés ont eu leur bloc SMART recalculé depuis leur `smart.json` brut. Relevé au
+passage : `gnome-software` reste en mémoire (ligne de la 0.2 dans `PLAN.md`).

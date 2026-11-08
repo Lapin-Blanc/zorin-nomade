@@ -1,0 +1,292 @@
+{
+  "schema": 1,
+  "type": "systeme",
+  "outil": {
+    "nom": "nomade-diag",
+    "version": "0.2.0-alpha"
+  },
+  "date": "2026-11-08T20:36:52+01:00",
+  "anonymise": true,
+  "options": {
+    "mesures": false,
+    "ecriture_max_mib": null,
+    "test": false
+  },
+  "non_lu": {},
+  "systeme": {
+    "nomade_version": "0.2.0-alpha",
+    "image": "zorin-nomade-20261108-1920.img",
+    "deploy_version": "0.2.0-alpha",
+    "deploy_date": "2026-11-08T20:14:36+01:00",
+    "zorin": "18",
+    "systeme": "Zorin OS 18.1",
+    "noyau": "7.0.0-42-generic",
+    "paquets": {
+      "shim-signed": "1.58+15.8-0ubuntu1",
+      "grub-efi-amd64-signed": "1.202.5+2.12-1ubuntu7.3",
+      "libgl1-mesa-dri": "25.2.8-0ubuntu0.24.04.4",
+      "linux-firmware": "20240318.git3b128b60.0ubuntu3.1"
+    },
+    "deploye": true,
+    "autotest": {
+      "pass": 129,
+      "fail": 0,
+      "echecs": [],
+      "code": 0
+    }
+  },
+  "pc": {
+    "empreinte": "2396366bf4299efd",
+    "fabricant": "HP",
+    "modele": "HP ProBook 450 15.6 inch G9 Notebook PC",
+    "version": "SBKPFV3",
+    "famille": "103C_5336AN HP ProBook",
+    "carte": {
+      "fabricant": "HP",
+      "modele": "8978"
+    },
+    "type_chassis": 10,
+    "firmware": {
+      "editeur": "HP",
+      "version": "U72 Ver. 01.17.00",
+      "date": "11/06/2025"
+    },
+    "cpu": "12th Gen Intel(R) Core(TM) i5-1235U",
+    "cpu_fils": 12,
+    "ram_mib": 15622,
+    "barrettes": [
+      {
+        "taille": "16 GB",
+        "type": "DDR4",
+        "vitesse": "3200 MT/s"
+      }
+    ],
+    "batterie": {
+      "sante_pct": 72,
+      "cycles": 149
+    },
+    "tpm": true,
+    "tpm_version": 2,
+    "uefi_bits": 64
+  },
+  "secure_boot": {
+    "actif": true,
+    "mode_installation": false,
+    "ms_uefi_ca_2011": true,
+    "ms_uefi_ca_2023": true,
+    "windows_pca_2011": true,
+    "db": [
+      "HP UEFI Secure Boot DB 2017",
+      "Microsoft Windows Production PCA 2011",
+      "Microsoft UEFI CA 2023",
+      "Microsoft Corporation UEFI CA 2011"
+    ],
+    "pk": "HP UEFI Secure Boot PK 2017",
+    "db_entrees": 4,
+    "dbx_entrees": 523
+  },
+  "affichage": {
+    "gpu": [
+      {
+        "classe": "0300",
+        "id": "8086:4628",
+        "nom": "Intel Corporation Alder Lake-UP3 GT2 [UHD Graphics]",
+        "pilote": "i915"
+      }
+    ],
+    "session": "wayland",
+    "bureau": "zorin:GNOME",
+    "moteur": "Mesa Intel(R) Graphics (ADL GT2)",
+    "logiciel": false,
+    "accelere": true,
+    "ecrans": [
+      {
+        "connecteur": "eDP-1",
+        "fabricant": "AUO",
+        "produit": "3da3",
+        "nom": null,
+        "mode": "1920x1080"
+      }
+    ]
+  },
+  "peripheriques": {
+    "reseau": [
+      {
+        "type": "ethernet",
+        "id": "10ec:8168",
+        "pilote": "r8169",
+        "etat": "unavailable",
+        "fonctionne": false
+      },
+      {
+        "type": "wifi",
+        "id": "10ec:b852",
+        "pilote": "rtw89_8852be",
+        "etat": "connected",
+        "fonctionne": true
+      }
+    ],
+    "reseau_sans_pilote": [],
+    "bluetooth": true,
+    "son": [
+      "0 [sofhdadsp      ]: sof-hda-dsp - sof-hda-dsp"
+    ],
+    "serveur_son": null,
+    "webcams": [
+      "HP HD Camera: HP HD Camera"
+    ]
+  },
+  "cle": {
+    "empreinte": "eab8a3536c6aac5d",
+    "vid_pid": "2109:0715",
+    "identification": {
+      "role": "pont",
+      "nom": "VIA Labs VL715 (probablement), pont USB 3.2 Gen 2 vers SSD SATA",
+      "precision": "modele"
+    },
+    "usb": {
+      "version": "3.10",
+      "vitesse_mbps": 10000,
+      "pilote": "usb-storage",
+      "bridee_usb2": false,
+      "concentrateur": false,
+      "quirk_usb_storage": null
+    },
+    "capacite_gio": 119.2,
+    "trim": false,
+    "provisioning_mode": "full",
+    "file_commandes": 1,
+    "rotatif_declare": false,
+    "ordonnanceur": "mq-deadline",
+    "reinitialisations_usb": 0,
+    "erreurs_es": 0,
+    "luks": {
+      "chiffrement": "aes-xts-plain64",
+      "taille_cle_bits": 512,
+      "drapeaux": [
+        "discards",
+        "no_read_workqueue",
+        "no_write_workqueue"
+      ]
+    },
+    "fstrim_dernier": null,
+    "deploy_discard": 0,
+    "data_gib": 11,
+    "data": {
+      "taille_gio": 11.0,
+      "libre_gio": 11.0
+    }
+  },
+  "demarrage": {
+    "firmware_s": 15.2,
+    "chargeur_s": 6.7,
+    "noyau_s": 14.5,
+    "espace_utilisateur_s": 11.9,
+    "total_s": 48.4,
+    "plus_lents": [
+      {
+        "unite": "plymouth-quit-wait.service",
+        "s": 5.4
+      },
+      {
+        "unite": "apparmor.service",
+        "s": 2.4
+      },
+      {
+        "unite": "ldconfig.service",
+        "s": 2.1
+      },
+      {
+        "unite": "NetworkManager.service",
+        "s": 1.4
+      },
+      {
+        "unite": "media-NOMADE\\x2dDATA.mount",
+        "s": 0.7
+      },
+      {
+        "unite": "boot-efi.mount",
+        "s": 0.7
+      },
+      {
+        "unite": "systemd-machine-id-commit.service",
+        "s": 0.5
+      },
+      {
+        "unite": "thermald.service",
+        "s": 0.4
+      },
+      {
+        "unite": "update-notifier-download.service",
+        "s": 0.4
+      },
+      {
+        "unite": "dev-mapper-nomade\\x2droot.device",
+        "s": 0.4
+      },
+      {
+        "unite": "udisks2.service",
+        "s": 0.4
+      },
+      {
+        "unite": "systemd-resolved.service",
+        "s": 0.3
+      },
+      {
+        "unite": "gnome-remote-desktop.service",
+        "s": 0.3
+      },
+      {
+        "unite": "power-profiles-daemon.service",
+        "s": 0.3
+      },
+      {
+        "unite": "systemd-journal-catalog-update.service",
+        "s": 0.3
+      }
+    ]
+  },
+  "memoire": {
+    "totale_mib": 15622,
+    "disponible_mib": 13401,
+    "zram_mib": 7811,
+    "zram_taux": 64.0,
+    "swap_utilise_mib": 0,
+    "psi_memoire_avg300": 0.0,
+    "plus_gros": [
+      "brave",
+      "gnome-shell",
+      "brave",
+      "gnome-software",
+      "brave",
+      "brave",
+      "mutter-x11-fram",
+      "Xwayland",
+      "gsd-xsettings",
+      "brave"
+    ]
+  },
+  "ecritures": {
+    "depuis_demarrage_mib": 485,
+    "uptime_s": 766,
+    "debit_mib_h": 2282.2,
+    "ext4_total_gib": 7.2
+  },
+  "erreurs": {
+    "unites_en_echec": [],
+    "journal_err": 10,
+    "par_unite": {
+      "gdm.service": 4,
+      "user@1000.service": 4,
+      "bluetooth.service": 2
+    },
+    "firmwares_manquants": [],
+    "acpi": 0,
+    "oops": 0,
+    "gpu_blocages": 0,
+    "noyau_contamine": 0,
+    "plantages": []
+  },
+  "mesures": null,
+  "alertes": []
+}

@@ -146,7 +146,10 @@ def generer(resumes):
         pc, sb, af, dem = r.get("pc") or {}, r.get("secure_boot") or {}, r.get("affichage") or {}, r.get("demarrage") or {}
         gpu = "; ".join("%s (%s)" % (g.get("nom"), g.get("pilote")) for g in af.get("gpu") or []) or "—"
         wifi = [x for x in (r.get("peripheriques") or {}).get("reseau", []) if x.get("type") == "wifi"]
-        lignes.append([v(r, "date")[:10], v(pc, "empreinte")[:8], "%s %s" % (v(pc, "fabricant"), v(pc, "modele")),
+        modele = v(pc, "modele")
+        if not modele.startswith(v(pc, "fabricant")):
+            modele = "%s %s" % (v(pc, "fabricant"), modele)
+        lignes.append([v(r, "date")[:10], v(pc, "empreinte")[:8], modele,
                        "%s (%s)" % (v(pc, "firmware", "version"), v(pc, "firmware", "date")), v(pc, "ram_mib"),
                        v(sb, "actif"), v(sb, "ms_uefi_ca_2011"), v(sb, "ms_uefi_ca_2023"), gpu.replace("|", "/"),
                        "logiciel" if af.get("logiciel") else ("matériel" if af.get("logiciel") is False else "—"),

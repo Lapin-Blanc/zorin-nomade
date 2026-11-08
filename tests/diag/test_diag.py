@@ -113,6 +113,19 @@ class Capacite(unittest.TestCase):
         self.assertLessEqual(r["fiable_octets"], 128 << 20)
 
 
+class Smart(unittest.TestCase):
+    def test_unite_241(self):
+        j = {"smart_status": {"passed": True}, "power_on_time": {"hours": 236},
+             "ata_smart_attributes": {"table": [{"id": 241, "name": "Total_LBAs_Written", "raw": {"value": 37564}}]}}
+        r = materiel.resumer_smart(j, "sat")
+        self.assertIsNone(r["ecrit_gio"])                       # 18 Mio en 236 h : unité inconnue
+        self.assertEqual(r["ecrit_brut"]["valeur"], 37564)
+        j["ata_smart_attributes"]["table"][0]["raw"]["value"] = 2 * 2 ** 30 // 512 * 100
+        self.assertEqual(materiel.resumer_smart(j, "sat")["ecrit_gio"], 200.0)
+        j["ata_smart_attributes"]["table"][0] = {"id": 241, "name": "Host_Writes_32MiB", "raw": {"value": 3200}}
+        self.assertEqual(materiel.resumer_smart(j, "sat")["ecrit_gio"], 100.0)
+
+
 class Verdict(unittest.TestCase):
     def test_seuils(self):
         self.assertEqual(V.categorie_mesuree(0.05), "A")
@@ -163,6 +176,12 @@ class Anonymat(unittest.TestCase):
         self.assertIn("10:20:30", t)
         self.assertEqual(self.a.trouvailles("t", t), [])
         self.assertTrue(self.a.trouvailles("t", "reste SN0123456789AB"))
+
+    def test_unites_systemd_pas_courriels(self):
+        t = "user@1000.service: 10 erreurs ; getty@tty1.service ; systemd-fsck@dev-sda1.service"
+        self.assertEqual(self.a.nettoyer(t), t)
+        self.assertEqual(self.a.trouvailles("t", t), [])
+        self.assertIn("«courriel»", self.a.nettoyer("écrire à prof@ecole.be"))
 
     def test_generiques_ignores(self):
         self.assertIsNone(self.a.secret("pc", "To Be Filled By O.E.M."))

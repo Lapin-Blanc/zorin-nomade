@@ -233,8 +233,19 @@ def resumer_smart(j, type_):
     for a in (j.get("ata_smart_attributes") or {}).get("table", []):
         nom = (a.get("name") or "").lower()
         brut = (a.get("raw") or {}).get("value")
-        if a.get("id") == 241 and "lba" in nom and brut is not None:
-            r["ecrit_gio"] = round(brut * 512 / 2 ** 30, 1)
+        if a.get("id") == 241 and brut is not None:
+            # L'unité de l'attribut 241 varie d'un contrôleur à l'autre (secteur, 32 Mio, Gio…) et
+            # smartctl ne la connaît que pour les SSD de sa base : valeur brute toujours gardée,
+            # conversion seulement si l'unité est dite, ou si les secteurs donnent un total plausible.
+            r["ecrit_brut"] = {"attribut": 241, "nom": a.get("name"), "valeur": brut}
+            if "gib" in nom:
+                r["ecrit_gio"] = float(brut)
+            elif "32mib" in nom:
+                r["ecrit_gio"] = round(brut / 32, 1)
+            elif "lba" in nom:
+                g = brut * 512 / 2 ** 30
+                if g >= 1 or (r["heures"] or 0) < 10:
+                    r["ecrit_gio"] = round(g, 1)
         if a.get("id") in (231, 233, 177, 202) and ("life" in nom or "wear" in nom):
             v = a.get("value")
             if v is not None and r["usure_pct"] is None:

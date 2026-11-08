@@ -28,7 +28,9 @@ RE_IPV6 = re.compile(
     r"(?<![0-9A-Fa-f:])(?:(?:[0-9A-Fa-f]{1,4}:){4,7}[0-9A-Fa-f]{1,4}"
     r"|(?:[0-9A-Fa-f]{1,4}:)+:(?:[0-9A-Fa-f]{1,4}:)*[0-9A-Fa-f]{1,4}"
     r"|::(?:[0-9A-Fa-f]{1,4}:)+[0-9A-Fa-f]{1,4})(?![0-9A-Fa-f:])")
-RE_COURRIEL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# Courriel, mais pas une unité systemd instanciée (user@1000.service, getty@tty1.service…)
+UNITES_SYSTEMD = "service|socket|timer|mount|automount|target|path|slice|scope|device|swap"
+RE_COURRIEL = re.compile(r"[A-Za-z0-9._%%+-]+@[A-Za-z0-9.-]+\.(?!(?:%s)\b)[A-Za-z]{2,}" % UNITES_SYSTEMD)
 RE_HOME = re.compile(r"/home/[^/\s'\"]+")
 
 
