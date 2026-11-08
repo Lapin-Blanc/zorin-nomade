@@ -185,3 +185,15 @@ v0.1 déplacés par `git mv`), `PLAN.md` en feuille de route (0.1.0-alpha, 0.2 �
 déployée », plus tard), `CLAUDE.md` recadré, `docs/A-FAIRE-FABIEN.md` à jour, `CHANGELOG.md`. Version
 0.1.0-alpha : `PROJECT_VERSION`, `NOMADE_VERSION` (build-info, contrôle E-08), `DEPLOY_VERSION`,
 `make help`. Branche partie de `correctifs-cle` (PR #1 pas encore fusionnée).
+
+## 2026-11-08 15:26 — sur l'hôte : `make image` et `make deploy-test RUNS=2` verts (`outil-alpha`)
+Branche `outil-alpha` (`aceb0ec`, contient les PR #1 et #2). `make image` : 12 min, image
+`zorin-nomade-20261108-1457` (6,8 Gio alloués, 28 Gio apparents). `make deploy-test RUNS=2` : deux
+déploiements chiffrés de suite sur le fichier de 64 Gio (2 min 55 s, 3 min 7 s), « TRIM : essai réussi »
+aux deux passages (le second sur une cible déjà partitionnée), aucun secret de test dans le journal ;
+démarrage avec phrase saisie au clavier virtuel : `RESULT=PASS` Secure Boot activé (96 s) et désactivé
+(102 s), 124 contrôles dont E-30 (65536 octets par inode) et E-08 (version de l'outil dans `build-info`).
+Défaut cosmétique relevé, non corrigé : au premier passage, `deploy-test.sh:74` affiche « Aucun fichier
+ou dossier » (`2>/dev/null` placé après `<"$logf"` ne couvre pas l'erreur de redirection) ; la valeur
+de repli `0` est juste. `git fetch` en SSH refusé par l'agent (clé non déverrouillée) ; les branches
+locales correspondaient déjà aux têtes des PR (vérifié avec `gh`).

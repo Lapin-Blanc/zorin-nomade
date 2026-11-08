@@ -31,8 +31,10 @@ lint par shellcheck seul, puis CI GitHub.
       Vérifiés après redémarrage : unités masquées, `/run/user/1000` à 1,8 Gio, Logiciels absent.
 - [x] Branche poussée, PR #1 ; CI `lint` et `image` vertes (`make test` : 107 contrôles, Secure Boot
       activé et désactivé ; accès à KVM rétabli après la construction).
-- [ ] Sur l'hôte : `make deploy-test` (absent de la CI) ; vérifier « TRIM : essai réussi » aux deux
-      passages et la ligne E-30 « racine recréée à 65536 octets par inode » ; fusionner la PR #1.
+- [x] Sur l'hôte : `make deploy-test RUNS=2` (absent de la CI) sur `outil-alpha` : « TRIM : essai
+      réussi » aux deux passages, E-30 « racine recréée à 65536 octets par inode », 124 contrôles,
+      `RESULT=PASS` Secure Boot activé et désactivé.
+- [ ] Fusionner la PR #1.
 
 ### Le dépôt devient l'outil (D-044, branche `outil-alpha`)
 
@@ -44,7 +46,8 @@ lint par shellcheck seul, puis CI GitHub.
 - [x] Version : `PROJECT_VERSION` (`config/project.env`), `CHANGELOG.md`, `NOMADE_VERSION` dans
       `/etc/nomade/build-info` (contrôle E-08), `DEPLOY_VERSION` dans `deploy-info`, version affichée
       par `make help`.
-- [ ] CI verte sur la PR ; fusion après la PR #1.
+- [x] CI verte sur la PR #2 (`lint`, `image`).
+- [ ] Fusion de la PR #2 après la PR #1.
 - [ ] **Acceptation** : PR #1 et PR « outil » fusionnées, `make deploy-test` vert sur l'hôte ; Fabien pose
       l'étiquette `v0.1.0-alpha` sur `main` (`git tag -a v0.1.0-alpha -m … && git push --tags`) et date
       la version dans `CHANGELOG.md`.

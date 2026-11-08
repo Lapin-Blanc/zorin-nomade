@@ -5,13 +5,9 @@ décisions). Dernière mise à jour : 2026-11-08.
 
 ## En cours : version 0.1.0-alpha
 
-1. **Sur l'hôte** (Zorin interne) : récupérer la branche de la PR #1 et lancer le test de déploiement,
-   absent de la CI :
-   ```bash
-   git fetch && git switch correctifs-cle && make deploy-test
-   ```
-   Vérifier « TRIM : essai réussi » aux deux passages et la ligne E-30 « racine recréée à 65536 octets
-   par inode » ; puis fusionner la PR #1, puis la PR « outil » (`outil-alpha`).
+1. **Fusionner les PR** : `make deploy-test RUNS=2` est vert sur l'hôte (2026-11-08, branche
+   `outil-alpha`, qui contient les PR #1 et #2). Reste ton accord pour fusionner la PR #1, puis la PR
+   « outil » (`outil-alpha`).
 2. **Étiqueter la version** sur `main` une fois tout vert : dater la section 0.1.0-alpha de
    `CHANGELOG.md`, puis `git tag -a v0.1.0-alpha -m "zorin-nomade 0.1.0-alpha" && git push --tags`
    (ou demande-le à Claude).
