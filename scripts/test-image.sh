@@ -103,9 +103,15 @@ if "error" in r:
 PY
 }
 
-# Construit la ligne de commande QEMU commune dans le tableau global QEMU_CMD.
+# Sockets QMP dans un dossier court : un chemin de socket Unix est limité à 108 octets, ce que
+# dépasse out/test/… dès que le dépôt est cloné dans un dossier profond.
+QMP_DIR="$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/nomade-qmp.XXXXXX")"
+trap 'rm -rf "$QMP_DIR"' EXIT
+
+# Construit la ligne de commande QEMU commune dans le tableau global QEMU_CMD (et QMP_SOCK).
 build_cmd() {
   local sb="$1" dir="$2" code vars machine
+  QMP_SOCK="$QMP_DIR/${dir##*/}.sock"
   if [[ "$sb" == on ]]; then code="$OVMF_CODE_SB"; vars="$OVMF_VARS_SB"; else code="$OVMF_CODE"; vars="$OVMF_VARS"; fi
   [[ -r "$code" && -r "$vars" ]] || die "firmware OVMF introuvable ($code / $vars)"
   cp "$vars" "$dir/vars.fd"                       # NVRAM vierge : aucune entrée de boot
@@ -127,7 +133,7 @@ build_cmd() {
     -device virtio-rng-pci
     -vga virtio
     -serial file:"$dir/serial.log"
-    -qmp unix:"$dir/qmp.sock",server=on,wait=off
+    -qmp unix:"$QMP_SOCK",server=on,wait=off
   )
 }
 
@@ -146,16 +152,16 @@ run_gui() {
 # 8 s après le chargement par GRUB (initramfs en attente de la phrase) — le menu GRUB ne dure que
 # 3 s. Déverrouillée quand les lectures reprennent en masse (montage de la racine).
 unlock_step() {
-  rd="$(qmp "$dir/qmp.sock" rdops stick 2>/dev/null || echo 0)"
+  rd="$(qmp "$QMP_SOCK" rdops stick 2>/dev/null || echo 0)"
   [[ "$rd" =~ ^[0-9]+$ ]] || rd=0
   if ((rd == rd_prev && rd > 0)); then still=$((still + 3)); else still=0; fi
   case "$lstate" in
     locked)
       if ((waited >= 15 && still >= 8)); then
-        qmp "$dir/qmp.sock" screendump "$dir/question.png" 2>>"$dir/qemu.log" || true
+        qmp "$QMP_SOCK" screendump "$dir/question.png" 2>>"$dir/qemu.log" || true
         tries=$((tries + 1))
         log "question LUKS (disque inactif depuis ${still}s, ${waited}s) : saisie de la phrase, essai $tries"
-        qmp "$dir/qmp.sock" type 2>>"$dir/qemu.log" || warn "saisie QMP en échec"
+        qmp "$QMP_SOCK" type 2>>"$dir/qemu.log" || warn "saisie QMP en échec"
         lstate=typed t_typed=$waited rd_typed=$rd still=0
         rd_prev=$rd
         return 0
@@ -193,13 +199,13 @@ run_selftest() {
   while kill -0 "$pid" 2>/dev/null; do
     if ((encrypted)) && [[ "$lstate" != unlocked ]]; then unlock_step; fi
     if grep -aq 'NOMADE-SELFTEST: RESULT=' "$dir/serial.log" 2>/dev/null; then
-      if ((!shot)); then qmp "$dir/qmp.sock" screendump "$dir/screen.png" 2>>"$dir/qemu.log" || true; shot=1; fi
+      if ((!shot)); then qmp "$QMP_SOCK" screendump "$dir/screen.png" 2>>"$dir/qemu.log" || true; shot=1; fi
       after_result=$((after_result + 3))
-      if ((after_result > 90)); then qmp "$dir/qmp.sock" quit 2>/dev/null || kill "$pid" 2>/dev/null || true; fi
+      if ((after_result > 90)); then qmp "$QMP_SOCK" quit 2>/dev/null || kill "$pid" 2>/dev/null || true; fi
     elif ((waited >= timeout_s)); then
       warn "délai dépassé (Secure Boot $sb) — capture d'écran puis arrêt"
-      qmp "$dir/qmp.sock" screendump "$dir/screen.png" 2>>"$dir/qemu.log" || true
-      qmp "$dir/qmp.sock" quit 2>/dev/null || kill "$pid" 2>/dev/null || true
+      qmp "$QMP_SOCK" screendump "$dir/screen.png" 2>>"$dir/qemu.log" || true
+      qmp "$QMP_SOCK" quit 2>/dev/null || kill "$pid" 2>/dev/null || true
       break
     fi
     sleep 3; waited=$((waited + 3))

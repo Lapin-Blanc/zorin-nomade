@@ -110,3 +110,10 @@ du job, artefact `diagnostic` (journaux, série, captures, manifeste ; pas d'ima
 `make ci`, qui ajoute `scripts/test-guards.sh` (16 refus attendus des garde-fous, sans root).
 Validation locale : YAML chargé, étapes `run` passées à shellcheck (`actionlint` absent de l'hôte).
 Pas de dépôt GitHub : rien n'est poussé ; marche à suivre dans `docs/A-FAIRE-FABIEN.md`.
+
+## 2026-11-08 10:55 — phase 5 / reproductibilité, premier essai
+Clone propre dans un dossier temporaire profond, VM détruite : construction depuis zéro réussie
+(VM neuve, cache APT vide, ≈ 15 min), mais les deux essais QEMU échouent en 3 s : le chemin du socket
+QMP (`out/test/sb-on/qmp.sock` sous un chemin long) dépasse la limite de 108 octets des sockets Unix.
+Défaut invisible dans le dépôt principal (chemin court). Correction : sockets dans
+`$XDG_RUNTIME_DIR/nomade-qmp.XXXXXX`. Chaîne complète relancée depuis le clone mis à jour.
