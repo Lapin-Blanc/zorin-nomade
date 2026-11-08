@@ -44,14 +44,6 @@ jobs:
           sudo apt-get install -y -qq squashfs-tools gdisk dosfstools e2fsprogs bmap-tools zstd \
             qemu-system-x86 qemu-utils ovmf shellcheck
 
-      - name: Accès à KVM pour l'utilisateur du runner
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-          ls -l /dev/kvm
-
       - name: Lint et garde-fous
         run: make ci
 
@@ -90,6 +82,18 @@ jobs:
             --cache "$RUNNER_TEMP/apt-cache" --stamp "$stamp" --commit "${GITHUB_SHA::7}" \
             2>&1 | tee "out/logs/build-$stamp.log" | grep --line-buffered -E '^\[[0-9:]+\]|ATTENTION|ERREUR'
           ls -ls out/
+
+      # Après la construction, pas avant : dans le chroot, le postinst de udev lance
+      # « systemd-tmpfiles --create static-nodes-permissions.conf » sur le /dev du runner (monté
+      # dans le chroot), ce qui remet /dev/kvm en 0660 root:kvm (constaté au premier run).
+      - name: Accès à KVM pour l'utilisateur du runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
 
       - name: Tester l'image (Secure Boot activé puis désactivé)
         run: make test

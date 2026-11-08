@@ -129,6 +129,8 @@ Aucune exigence de `SPEC.md` n'est abandonnée.
 - [ ] Question LUKS : la phrase se tape en clavier belge ; l'indicateur affiche `be`.
 - [ ] Écran de connexion, session GNOME ouverte avec ton mot de passe.
 - [ ] `mokutil --sb-state` → l'état attendu selon le PC.
+- [ ] Secure Boot activé et clé refusée : vérifier l'option du firmware qui autorise « Microsoft UEFI CA »
+      (README § 5, PC « Secured-core »).
 - [ ] Clé débranchée, le menu de démarrage du firmware **ne garde aucune entrée « ubuntu » ou
       « Zorin »** (la clé n'écrit jamais en NVRAM ; seule l'entrée USB générique du firmware
       apparaît quand la clé est branchée).
@@ -158,6 +160,8 @@ Aucune exigence de `SPEC.md` n'est abandonnée.
 - [ ] Logiciels (GNOME) : pas de téléchargement en arrière-plan ; les mises à jour de sécurité
       automatiques restent actives (`systemctl status unattended-upgrades`).
 - [ ] `systemd-analyze` → durée de démarrage (pour comparer d'un PC à l'autre).
+- [ ] Mise en veille : fermer le capot (ou attendre 15 min sur batterie), rouvrir, puis
+      `journalctl -k -b | grep -iE 'uas|reset|I/O error'` → rien de neuf depuis la mise en veille.
 
 **Première mise à jour**
 - [ ] `sudo apt update && sudo apt full-upgrade` → puis `ls /boot/efi/EFI/BOOT` : `BOOTX64.EFI`,

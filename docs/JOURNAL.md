@@ -125,3 +125,54 @@ Clone et sa VM supprimés ; la VM du dépôt principal aussi (recréée au proch
 `docs/RAPPORT.md` écrit (résultats, déviations, limites, checklist du premier démarrage natif).
 Contrôle de présence de l'ISO dans la VM rendu silencieux (message « FAILED open or read »
 trompeur). Fin du run autonome : phases 0 à 5 terminées.
+
+## 2026-11-08 12:00 — clé déployée, évaluation sur matériel réel
+Session Claude Code lancée **sur la clé** (HP ProBook 455 G10, Ryzen 3 7330U, 7 Gio, port USB
+10 Gbit/s, pont `090c:2320` en `uas`, Secure Boot désactivé ; premier démarrage). Mesures :
+lecture séquentielle 800–830 Mo/s, écriture 560 Mo/s, 4K aléatoire QD1 médiane 0,20 ms (p99 0,28 ms,
+≈ 4 900 IOPS), `fdatasync` ≈ 1 ms, AES-XTS 1,7 Gio/s. Démarrage : firmware 16,3 s, GRUB 7,3 s (3 s de
+menu + ≈ 4 s pour 100 Mo de noyau et d'initramfs), clé vue à 1,3 s, racine montée à 15,4 s (phrase
+LUKS), `graphical.target` 10,6 s plus tard. Session GNOME ≈ 1 Gio PSS + ≈ 0,25 Gio de services ;
+zram 3,5 Gio (zstd), zswap coupé. Tous les réglages E-19 à E-27 et E-40 constatés en place.
+Constats : (1) `DEPLOY_DISCARD=0` alors que `fstrim -v /` réduit 927,7 Gio sans erreur : l'essai de
+`deploy.sh` appelait `blkdiscard` sans `-f` ; util-linux 2.39 refuse quand stdin est un terminal et
+que le disque porte une signature (message masqué par `2>/dev/null`) ; invisible en test (stdin = tube).
+Impact faible : p3 TRIMée avec `-f`, le noyau de la clé active lui-même `provisioning_mode=unmap`.
+(2) ≈ 12 Gio écrits par `ext4lazyinit` la première demi-heure (62,3 M d'inodes, 0,28 M utilisés).
+(3) Profil Brave de 343 Mo dans `/run/user/1000` plafonné à 725 Mo. (4) `secureboot-db.service` écrit
+db/dbx dans la NVRAM du PC si elles lui manquent (rien ici) ; fwupd propose les firmwares du PC.
+(5) La db de ce HP n'a pas « Microsoft Corporation UEFI CA 2011 », qui signe le shim : refus avec
+Secure Boot actif tant que l'option du firmware est coupée. (6) RTC du HP en UTC (Zorin interne) : la
+clé (LocalRTC) démarre avec 1 h de retard jusqu'à la synchro NTP (78 s), sans réécrire le RTC.
+
+## 2026-11-08 12:50 — correctifs (branche `correctifs-cle`, préparée sur la clé)
+GitHub injoignable depuis la clé : commits locaux, à pousser plus tard. Ni `make`, ni QEMU, ni OVMF sur
+la clé : shellcheck 0.9.0 extrait sans root du paquet Ubuntu (`apt-get download`) et lancé comme
+`make lint` ; `scripts/test-guards.sh` passe. Construction et tests QEMU **non relancés** : à faire sur
+l'hôte (PLAN phase 6). Changements : essai de TRIM corrigé (`-f`, `</dev/null`, cause consignée) et
+exigé par `deploy-test.sh` ; `DEPLOY_INODE_RATIO=65536` (D-041) ; `logind.conf.d` à 25 % (D-040) ;
+masquage `secureboot-db`/`fwupd` (D-042, E-43) ; autotest + 5 contrôles ; README (Secured-core) et
+checklist (veille). Sur la clé : script à chaud fourni à Fabien (mêmes réglages + règle udev et
+`deploy-info` corrigés) ; GNOME Logiciels sans lancement automatique (`~/.config/autostart`).
+
+## 2026-11-08 13:10 — correctifs à chaud vérifiés après redémarrage
+Script lancé par Fabien, puis redémarrage de la clé : `secureboot-db.service`, `fwupd.service`,
+`fwupd-refresh.timer` masqués ; `/run/user/1000` à 1,8 Gio (25 %) ; règle udev avec
+`provisioning_mode=unmap` ; `DEPLOY_DISCARD=1` annoté ; GNOME Logiciels absent de la session.
+Deuxième démarrage : firmware 11,7 s, GRUB 7,4 s, noyau 11,2 s (phrase LUKS comprise), espace
+utilisateur 10,0 s.
+
+## 2026-11-08 13:25 — CI `image` : premier run sur GitHub (PR #1)
+Lint vert. Construction réussie sur le runner en 6 min (`masqués : secureboot-db.service fwupd.service
+fwupd-refresh.timer`), mais `make test` refuse : « /dev/kvm inaccessible ». L'étape KVM du workflow avait
+mis `/dev/kvm` en 0666 avant la construction ; pendant le `full-upgrade` dans le chroot, le postinst de
+`udev` lance `systemd-tmpfiles --create static-nodes-permissions.conf` (`z /dev/kvm 0660 - kvm -`) sur le
+`/dev` du runner, monté dans le chroot, et l'utilisateur du runner perd l'accès. Sans effet dans la VM de
+build (les tests tournent sur l'hôte). Correction : l'étape KVM passe juste avant `make test` et
+vérifie l'accès.
+
+## 2026-11-08 13:40 — CI `image` verte
+Run 42480117641 (commit `a078949`) : construction 6 min, `make test` → `RESULT=PASS` avec Secure Boot
+activé (78 s) et désactivé (72 s), 107 contrôles dont les nouveaux E-25 (`/run/user` à 25 %) et E-43
+(3 unités masquées) ; capture : écran de connexion GNOME. Reste `make deploy-test` sur l'hôte (contrôle
+E-30 des inodes, essai de TRIM aux deux passages) avant la fusion de la PR #1.

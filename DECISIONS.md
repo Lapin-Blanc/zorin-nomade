@@ -287,7 +287,7 @@ puis activé (le build échoue si le fichier existait déjà). Une mise à jour 
 la copie ; l'unité est stable depuis des années (`size=50%`, `nr_inodes=1m`).
 
 ## D-039 — Pas de publication de l'image (release) pour l'instant
-2026-11-08 · retenue (Fabien)
+2026-11-08 · remplacée par D-043 (Fabien) : l'argument de marque n'est plus retenu
 Contrairement au projet Debian, l'image n'est pas publiée dans une release GitHub ; D-023 est maintenu
 (CI = construction + test, diagnostics seulement). L'argument de taille ne tient pas (zstd + découpage
 sous 2 Gio comme dans le projet Debian), mais l'image est un Zorin Core **modifié** qui garde la marque
@@ -296,3 +296,46 @@ mention de la marque) est muette sur les versions modifiées, et une réponse de
 demande d'en retirer logos et marque. L'usage reste personnel, et pour les élèves limité au cadre des cours :
 l'image se construit et se déploie en local. À reconsidérer (dépôt et releases privés, ou accord de Zorin)
 si une diffusion plus large devient utile.
+
+## D-040 — psd : `/run/user/<uid>` plafonné à 25 % de la RAM
+2026-11-08 · retenue
+Constaté sur la clé déployée (HP ProBook 455 G10, 7 Gio) : le profil Brave fait déjà 343 Mo après une
+heure, dans un tmpfs `/run/user/1000` limité par défaut à 10 % de la RAM (725 Mo, ≈ 800 Mo sur un PC à
+8 Gio), rempli à 48 %. Quand le profil n'y tiendra plus, Brave et psd échoueront à écrire. Retenu :
+`RuntimeDirectorySize=25%` dans `/etc/systemd/logind.conf.d/60-nomade.conf` (absent du squashfs : rien à
+fusionner). Un tmpfs ne consomme que ce qu'il contient : le plafond plus haut ne coûte rien tant que le
+profil reste petit. Écarté : le mode overlayfs de psd (règle sudoers pour `psd-overlay-helper`, plus de
+pièces mobiles). Sur la clé déployée : script à chaud (remontage du tmpfs + même fichier).
+
+## D-041 — Racine recréée à 64 Kio par inode
+2026-11-08 · retenue
+Constaté sur la clé déployée : `mkfs.ext4` (D-035) avec le ratio par défaut (16 Kio) a créé 62,3 M
+d'inodes sur 950 Gio, pour 0,28 M utilisés (0,45 %), soit ≈ 15 Gio de tables d'inodes que `ext4lazyinit`
+écrit en tâche de fond au premier démarrage (≈ 12 Gio mesurés pendant la première demi-heure). Sans
+danger pour l'endurance du SSD, mais disque chargé pendant les premières minutes et fsck plus long.
+Retenu : `DEPLOY_INODE_RATIO=65536` (`config/project.env`) passé à `mkfs.ext4 -i` : 15,6 M d'inodes sur
+1 To, encore 55 fois l'usage actuel ; ≈ 1 M sur le fichier de test de 64 Gio. L'image elle-même (24 Gio)
+garde le ratio par défaut : à 64 Kio elle n'aurait que 0,39 M d'inodes pour 0,28 M utilisés. Le chemin
+non chiffré (`DEPLOY_ENCRYPT=0`, `resize2fs`) garde donc lui aussi 16 Kio. Effet au prochain déploiement.
+
+## D-042 — Aucune écriture dans le firmware du PC hôte (secureboot-db, fwupd)
+2026-11-08 · retenue (Fabien)
+Constaté sur la clé déployée : `secureboot-db.service` lance `sbkeysync` à chaque démarrage et écrit dans
+la NVRAM du PC les entrées db/dbx livrées par Ubuntu qui lui manquent (rien à écrire sur le HP de
+Fabien, à jour) ; fwupd (+ `fwupd-refresh.timer` quotidien) permet à Logiciels de proposer de flasher le
+BIOS ou les périphériques du PC hôte. Sur une clé qui démarre sur les PC des autres (élèves, école),
+c'est contraire à l'esprit de D-008. Retenu : `secureboot-db.service`, `fwupd.service` et
+`fwupd-refresh.timer` désactivés puis **masqués** au build (nouvelle exigence E-43, contrôlée par
+l'autotest). Pour mettre à jour le firmware de son propre portable, Fabien peut les démasquer
+ponctuellement (`sudo systemctl unmask fwupd.service`). Gain annexe : ≈ 47 Mio de RAM, plus de
+téléchargement LVFS. Sur la clé déployée : même masquage par le script à chaud.
+
+## D-043 — Marque Zorin : pas un frein ; l'image reste construite en local
+2026-11-08 · retenue (Fabien)
+Remplace D-039. L'argument de marque n'est plus pris en compte. L'usage du projet est marginal et
+pédagogique, et la question relève d'une zone grise, pas d'une interdiction : elle repose sur un seul
+message du forum Zorin, pas sur les conditions de Zorin elles-mêmes. La décision de fond ne change pas :
+l'image n'est pas publiée, parce qu'il n'y en a pas besoin. Elle se construit sur l'hôte (`make image`,
+10 à 20 min depuis l'ISO en cache) et `deploy.sh` la lit dans `out/latest.img`. La CI ne garde que les
+diagnostics (D-023). Une publication (zstd, découpage sous 2 Gio, release GitHub) reste possible plus
+tard si un besoin apparaît, sans obstacle de principe.

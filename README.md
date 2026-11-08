@@ -81,6 +81,14 @@ Paramètres (`config/project.env`, surcharges dans `config/local.env`) : `DEPLOY
 `cryptsetup`, `gdisk`, `rsync`, `exfatprogs` si partition de données) — tous présents chez toi.
 Relancer le déploiement sur la même clé repart de zéro.
 
+**Secure Boot et PC « Secured-core »** : le shim est signé par « Microsoft Corporation UEFI CA 2011 ».
+Certains PC récents ne font pas confiance à cette autorité tant qu'une option du firmware n'est pas
+activée (par exemple HP : « Enable MS UEFI CA key » dans la configuration Secure Boot ; Lenovo : « Allow Microsoft
+3rd Party UEFI CA »). C'est le cas du HP ProBook 455 G10 (db sans cette autorité, constaté le
+2026-11-08) : avec Secure Boot activé, il refuse la clé tant que l'option est coupée. Sinon, désactiver
+Secure Boot. Les certificats Microsoft de 2011 expirent en 2026 : surveiller les mises à jour de
+`shim-signed` (futurs shims signés par l'autorité de 2023).
+
 `make deploy-test` rejoue tout cela sans toi : dans la VM de build, vers un fichier creux de
 64 Gio, avec une phrase et un mot de passe générés pour l'occasion, puis démarre le fichier
 dans QEMU sur l'hôte et tape la phrase au clavier virtuel.

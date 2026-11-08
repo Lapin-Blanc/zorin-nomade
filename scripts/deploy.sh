@@ -43,6 +43,9 @@ fi
 require_cmd bmaptool sgdisk partx losetup blkid blockdev wipefs blkdiscard cryptsetup \
             mkfs.ext4 e2fsck resize2fs rsync fsck.vfat chroot findmnt udevadm sha256sum
 if ((DEPLOY_DATA_GIB > 0)); then require_cmd mkfs.exfat; fi
+if [[ ! "$DEPLOY_INODE_RATIO" =~ ^[0-9]+$ ]] || ((DEPLOY_INODE_RATIO < 4096)); then
+  die "DEPLOY_INODE_RATIO invalide : $DEPLOY_INODE_RATIO (octets par inode, ≥ 4096)"
+fi
 
 IMAGE="$(readlink -f "$IMAGE")"
 BMAP="${IMAGE%.img}.bmap"
@@ -162,7 +165,10 @@ log "pont USB : $VIDPID"
 
 # Le pont annonce-t-il le TRIM ? Sinon, on tente provisioning_mode=unmap le temps d'un essai.
 # L'essai porte sur le premier Mio du disque, effacé de toute façon juste après.
-DISCARD_OK=0
+# -f et </dev/null : sans -f, blkdiscard (util-linux ≥ 2.36) refuse quand stdin est un terminal
+# et que le disque porte déjà une signature (table de partitions) ; l'essai échouait donc sur
+# toute clé réelle déjà utilisée, mais pas en test (stdin = tube). Constaté le 2026-11-08.
+DISCARD_OK=0 DISCARD_ERR=""
 pm_files=()
 if [[ "$TEST" != 1 ]]; then
   mapfile -t pm_files < <(find "/sys/block/$(basename "$DEV")/device/scsi_disk/" -name provisioning_mode 2>/dev/null)
@@ -172,12 +178,18 @@ if ((${#pm_files[@]})); then pm_old="$(cat "${pm_files[0]}")"; log "provisioning
 if (($(cat "/sys/block/$(basename "$DEV")/queue/discard_max_bytes") == 0)) && ((${#pm_files[@]})); then
   echo unmap >"${pm_files[0]}" 2>/dev/null || true
 fi
-if (($(cat "/sys/block/$(basename "$DEV")/queue/discard_max_bytes") > 0)) \
-   && timeout 60 blkdiscard -o 0 -l 1048576 "$DEV" 2>/dev/null; then
+if (($(cat "/sys/block/$(basename "$DEV")/queue/discard_max_bytes") == 0)); then
+  DISCARD_ERR="discard_max_bytes=0 (le pont n'annonce pas le TRIM)"
+elif DISCARD_ERR="$(timeout 60 blkdiscard -f -o 0 -l 1048576 "$DEV" </dev/null 2>&1)"; then
   DISCARD_OK=1
+else
+  DISCARD_ERR="blkdiscard, code $? : ${DISCARD_ERR:-aucun message}"
+fi
+if ((DISCARD_OK)); then
   log "TRIM : essai réussi → provisioning_mode=unmap dans la règle udev"
 else
   log "TRIM : non disponible à travers ce pont → règle udev sans provisioning_mode"
+  log "TRIM : cause : ${DISCARD_ERR:-inconnue}"
   if [[ -n "$pm_old" ]]; then echo "$pm_old" >"${pm_files[0]}" 2>/dev/null || true; fi
 fi
 
@@ -242,7 +254,10 @@ if [[ "$DEPLOY_ENCRYPT" == 1 ]]; then
   log "LUKS2 $LUKS_UUID, drapeaux persistants :$flags"
   # Même UUID et même étiquette que la racine de l'image : fstab (E-07) et grub.cfg restent valides.
   # Options de création de la cible (son mke2fs.conf), pas celles de la machine qui déploie.
-  MKE2FS_CONFIG="$SRC/etc/mke2fs.conf" mkfs.ext4 -q -F -U "$U3" -L nomade-root "/dev/mapper/$MAPPER"
+  # -i : un inode pour DEPLOY_INODE_RATIO octets (D-041). Le défaut (16 Kio) donne 62 M d'inodes
+  # sur 1 To, soit ≈ 15 Gio de tables que ext4lazyinit écrit au premier démarrage.
+  MKE2FS_CONFIG="$SRC/etc/mke2fs.conf" mkfs.ext4 -q -F -i "$DEPLOY_INODE_RATIO" -U "$U3" \
+    -L nomade-root "/dev/mapper/$MAPPER"
   mount "/dev/mapper/$MAPPER" "$MNT"
   log "copie de la racine (rsync, attributs étendus et liens durs compris)…"
   rsync -aHAXS --numeric-ids "$SRC/" "$MNT/"
@@ -313,6 +328,7 @@ DEPLOY_ENCRYPT=$DEPLOY_ENCRYPT
 DEPLOY_USB_ID=$VIDPID
 DEPLOY_DISCARD=$DISCARD_OK
 DEPLOY_DATA_GIB=$DEPLOY_DATA_GIB
+DEPLOY_INODE_RATIO=$DEPLOY_INODE_RATIO
 DEPLOY_TEST=$TEST
 EOF
 

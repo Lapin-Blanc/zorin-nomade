@@ -141,6 +141,14 @@ Crochets `target-config` : xconfig, accessibilité, `31ubuntu_driver_packages`,
   `boot-sav*`, `apparmor-zorin-live`, `nvidia-zorin-live`, `zorin-os-census-live`, `gparted`, `efibootmgr`.
 - `zorin-gnome-tour-autostart` lance la visite Zorin à la première session : gardé (pas d'effet sur
   l'écran de connexion GDM attendu par le test).
+- Constaté sur la clé déployée (2026-11-08) : `secureboot-db.service` **activé** (lance `sbkeysync`,
+  qui écrit db/dbx dans la NVRAM du PC à chaque démarrage) et `fwupd-refresh.timer` activé ;
+  masqués avec `fwupd.service` (E-43, D-042). Pas de `/etc/systemd/logind.conf.d/` : le
+  `60-nomade.conf` de l'overlay ne fusionne rien (D-040).
+- GNOME Logiciels démarre en service résident (`/etc/xdg/autostart/org.gnome.Software.desktop`,
+  `--gapplication-service`, ≈ 160 Mio PSS). Coupé sur la clé de Fabien par un fichier
+  `~/.config/autostart/` (`Hidden=true`) ; pour l'image, méthode à choisir (le fichier du squashfs
+  ne doit pas être écrasé sans fusion).
 
 ## 6. Dépôts APT (conservés, E-04)
 
