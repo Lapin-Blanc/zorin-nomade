@@ -44,6 +44,33 @@ host_guard() {
   [[ $EUID -ne 0 ]] || die "ce script s'exécute sur l'hôte SANS privilèges (pas de sudo)"
 }
 
+# Taille en Gio de la partition NOMADE-DATA pour une clé de <taille_gio> Gio (D-046) :
+# DEPLOY_DATA_GIB si renseigné ; sinon DEPLOY_DATA_PCT % de la clé, au moins DEPLOY_DATA_MIN_GIB ;
+# 0 (avec un avertissement) si la racine passait sous IMAGE_ROOT_GIB + 16 Gio.
+data_gib() {
+  local disk="${1:?taille de la clé en Gio}" pct="${DEPLOY_DATA_PCT:-10}" min="${DEPLOY_DATA_MIN_GIB:-8}"
+  local want root root_min=$(( ${IMAGE_ROOT_GIB:-24} + 16 ))
+  [[ "$disk" =~ ^[0-9]+$ ]] || die "data_gib : taille de clé invalide : $disk"
+  if [[ -n "${DEPLOY_DATA_GIB:-}" ]]; then
+    [[ "$DEPLOY_DATA_GIB" =~ ^[0-9]+$ ]] || die "DEPLOY_DATA_GIB invalide : $DEPLOY_DATA_GIB (Gio, entier)"
+    echo "$DEPLOY_DATA_GIB"
+    return 0
+  fi
+  if [[ ! "$pct" =~ ^[0-9]+$ ]] || ((pct > 50)); then die "DEPLOY_DATA_PCT invalide : $pct (0 à 50)"; fi
+  [[ "$min" =~ ^[0-9]+$ ]] || die "DEPLOY_DATA_MIN_GIB invalide : $min (Gio, entier)"
+  if ((pct == 0)); then echo 0; return 0; fi
+  want=$((disk * pct / 100))
+  ((want >= min)) || want=$min
+  # ESP et /boot : IMAGE_ESP_MIB + IMAGE_BOOT_MIB, arrondis au Gio supérieur
+  root=$((disk - want - (${IMAGE_ESP_MIB:-1024} + ${IMAGE_BOOT_MIB:-2048} + 1023) / 1024))
+  if ((root < root_min)); then
+    warn "clé de $disk Gio : pas de partition NOMADE-DATA ($want Gio laisseraient $root Gio à la racine, < $root_min)"
+    echo 0
+    return 0
+  fi
+  echo "$want"
+}
+
 # --- Garde-fous des cibles de déploiement ---------------------------------------
 # À appeler dans TOUT script qui écrit sur une cible. Ne pas affaiblir.
 
@@ -89,6 +116,27 @@ assert_real_usb_target() {
   read -r -p "TOUT le contenu de ce disque sera détruit. Tape son numéro de série pour confirmer : " answer
   [[ "$answer" == "$serial" ]] || die "confirmation incorrecte — abandon, rien n'a été écrit"
   log "Cible confirmée : $dev"
+}
+
+# Disque USB entier en LECTURE SEULE (diag-cle sans COMPLET, D-048) : mêmes contrôles que
+# assert_real_usb_target, sans la saisie du numéro de série puisque rien n'est écrit ; une clé
+# montée est acceptée. Tout ce qui écrit passe par assert_real_usb_target, jamais par celle-ci.
+assert_usb_disk() {
+  local target="${1:-}" dev name tran
+  [[ -n "$target" ]] || die "aucune clé (KEY=/dev/disk/by-id/usb-…)"
+  [[ "$target" == /dev/disk/by-id/usb-* ]] \
+    || die "la clé doit être un chemin /dev/disk/by-id/usb-* (reçu : $target)"
+  [[ "$target" != *-part[0-9]* ]] || die "la clé doit être le disque entier, pas une partition"
+  [[ -b "$target" ]] || die "périphérique bloc introuvable : $target"
+  dev="$(readlink -f "$target")"
+  name="$(basename "$dev")"
+  [[ "$(lsblk -dno TYPE "$dev")" == disk ]] || die "$dev n'est pas un disque"
+  tran="$(lsblk -dno TRAN "$dev" | tr -d ' ')"
+  [[ "$tran" == usb ]] || die "$dev n'est pas sur un bus USB (transport : ${tran:-inconnu})"
+  if _system_disks | grep -qx "$name"; then
+    die "$dev porte un système de fichiers de l'hôte — refus"
+  fi
+  log "Disque USB (lecture seule) : $dev"
 }
 
 # Cible de test : fichier ordinaire ou loop device, uniquement avec DEPLOY_TEST=1.

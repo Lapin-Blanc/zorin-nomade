@@ -185,7 +185,7 @@ overlay_copy() {
     fi
     install -D -o root -g root -m "$(stat -c %a "$f")" "$f" "$R/$rel"
     n=$((n + 1))
-  done < <(find "$src" -type f -print0)
+  done < <(find "$src" -name __pycache__ -prune -o -type f -print0)
   log "overlay : $n fichiers copiés"
 }
 overlay_copy
@@ -410,7 +410,7 @@ fi
 while IFS= read -r -d '' f; do
   cmp -s "$f" "$R/${f#"$NOMADE_ROOT/config/rootfs/"}" \
     || die "un paquet a modifié /${f#"$NOMADE_ROOT/config/rootfs/"} de l'overlay"
-done < <(find "$NOMADE_ROOT/config/rootfs" -type f -print0)
+done < <(find "$NOMADE_ROOT/config/rootfs" -name __pycache__ -prune -o -type f -print0)
 
 # --------------------------------------------------------------------------------------------
 step "initramfs (E-12)"

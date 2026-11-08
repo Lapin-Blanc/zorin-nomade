@@ -427,3 +427,28 @@ de la clé est calculée par l'hôte et transmise par `deploy-info` (`DEPLOY_CLE
 PC est reconnu d'une clé de Fabien à l'autre. Le sel n'entre jamais dans une image, un dépôt, un
 journal ou la CI. `diagnostics/resumes/*.json` et `docs/terrain.md` sont **versionnés** dans le dépôt
 public (historique, rapport reproductible) ; les archives complètes restent hors de git. Note : § 4 et 5.
+
+## D-050 — Diagnostics : choix d'implémentation (run autonome)
+2026-11-08 · retenue (Claude, run autonome)
+Précisions prises sans question, dans le cadre de D-046 à D-049 :
+- **Une exigence de plus** : E-47 (anonymisation et format des rapports) à côté d'E-45 (`diag-cle`) et
+  E-46 (`nomade-diag`), pour que l'autotest la contrôle sous son propre numéro.
+- **Emplacements** : module `config/rootfs/usr/local/lib/nomade/nomade_diag/` et point d'entrée
+  `diag.py` (`python3 -I -B`, dossier ajouté explicitement au chemin d'import, pas de `__pycache__`,
+  que la copie de l'overlay ignore aussi) ; table dans `/usr/local/share/nomade/` ; lanceur
+  `/usr/local/bin/nomade-diag` et entrée de menu dans `/usr/local/share/applications/` (rien du
+  squashfs n'est touché). Le même code tourne depuis le dépôt (`diag-cle`, clé de 1 To).
+- **Garde-fous** : `assert_usb_disk` est une fonction nouvelle, sans toucher à
+  `assert_real_usb_target` ; le mode test de `diag-cle.sh` n'accepte qu'un fichier ou un loop
+  (`assert_test_target`). La contrefaçon simulée (device-mapper) est donc analysée en appelant le
+  module Python directement, dans la VM de build seulement.
+- **Écritures de `nomade-diag --mesures`** : fichier `O_TMPFILE` dans `/var/tmp` (racine, sans nom dès
+  sa création), rouvert par `/proc/self/fd` pour les écritures parallèles ; plafond respecté en
+  nombre d'opérations (`max_ops`) autant qu'en durée : ¼ pour la zone de travail, 1/16 par test
+  aléatoire, le reste à l'écriture séquentielle.
+- **Sel** : si `diagnostics/.sel` manque au déploiement, `deploy.sh` le crée (propriétaire : l'appelant
+  de `sudo`) avant de calculer l'empreinte ; une clé déployée avant la 0.2 tire le sien.
+- **Langue des commandes** : `LC_ALL=C.UTF-8` pour toutes les commandes lancées (sorties stables à
+  analyser) ; les rapports restent en français.
+- **resume.json** n'est nettoyé que des identifiants déclarés (pas des motifs IP : des numéros de version
+  y ressemblent) ; les fichiers bruts le sont des deux.

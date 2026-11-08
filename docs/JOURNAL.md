@@ -268,3 +268,21 @@ lanceur dans le menu ; écritures de `nomade-diag` sur la racine, plafond 1 Gio 
 `diag-cle` ramenée à **1 min** (proposé : 3) ; `smartmontools` sur l'hôte ; Python, `CLAUDE.md`
 élargi. Note, `PLAN.md`, `CLAUDE.md` et `docs/A-FAIRE-FABIEN.md` mis à jour. Prochaine étape :
 `NOMADE-DATA` (étape 1 de la note), sur feu vert.
+
+## 2026-11-08 18:50 — run 0.2 : R1 `NOMADE-DATA` validé
+`data_gib` (lib.sh) et ses 10 essais dans `make ci` ; `deploy.sh` : taille calculée, UUID exFAT,
+ligne `fstab` (`/media/NOMADE-DATA`, `uid`/`gid` lus dans la cible, `nofail`), `fsck.exfat` final ;
+`exfatprogs` dans l'image ; autotest E-44. `make all` : image `zorin-nomade-20261108-1822`, PASS Secure
+Boot activé et désactivé (81 s chacun). `make deploy-test RUNS=2` : 8 Gio (plancher) aux deux
+passages, PASS Secure Boot activé et désactivé, les 7 contrôles E-44 au vert (montage exFAT,
+partition 4, taille, propriétaire, écriture par l'utilisateur sans mot de passe). Constat :
+`load_env` réécrit les variables passées par l'environnement (les surcharges passent par
+`config/local.env`) ; les essais de `make ci` appliquent donc les leurs après `load_env`.
+
+## 2026-11-08 19:00 — run 0.2 : R2-R3 `diag-cle` validé dans la VM
+`make diag-cle-test` : 25 essais au vert du premier coup (lecture seule : fichier de 1 Gio inchangé au
+SHA-256 près ; analyse complète : 257/257 marqueurs, TRIM réel, premier et dernier Mio à zéro ;
+contrefaçon device-mapper 1 Gio sur 512 Mio : repliement détecté, « ne pas déployer » ; refus des
+gardes hors mode test). Incident : le `make image` suivant a échoué à l'envoi du dépôt, `diag-cle`
+lancé en root avait créé `/work/repo/diagnostics/` au nom de root. Corrigé : `diag-cle.sh` crée
+toujours `diagnostics/` au nom de l'appelant de `sudo` (comme `deploy.sh`).

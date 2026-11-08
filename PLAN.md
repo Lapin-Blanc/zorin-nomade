@@ -88,6 +88,20 @@ données comparables. Les tests grandeur nature qui suivront définiront les ver
 - [ ] Côté hôte : `make diag-rapport` rassemble les `resume.json` (`diagnostics/resumes/` et
       `docs/terrain.md` versionnés, archives hors de git, D-049) en un tableau comparatif ; `deploy.sh`
       affiche le verdict du dernier `diag-cle` et transmet empreinte et sel.
+Run autonome (2026-11-08, étapes de la note § 7 ; l'étape 7, essais réels, revient à Fabien) :
+- [x] R1 `NOMADE-DATA` : `data_gib` (lib.sh) + essais `make ci`, `deploy.sh` (taille, `fstab`),
+      `exfatprogs`, autotest E-44, SPEC, README, CHANGELOG ; `make all` puis `make deploy-test RUNS=2`.
+- [x] R2 module `nomade_diag/` + `diag-cle` en lecture seule : identification, lectures directes,
+      `assert_usb_disk` et ses refus, `make diag-cle`, `make diag-cle-test` (VM), tests unitaires.
+- [x] R3 `diag-cle COMPLET=1` : capacité, TRIM réel, écritures, écriture longue, remise à vide ;
+      contrefaçon simulée ; SPEC E-45.
+- [ ] R4 `nomade-diag` : collecte, anonymisation, lanceur, `selftest.sh --materiel`, autotest E-46,
+      numéro de série repère ; `make all`.
+- [ ] R5 `nomade-diag --mesures` (lecture, écriture plafonnée, AES).
+- [ ] R6 `make diag-rapport`, `diagnostics/`, `docs/terrain.md` ; `deploy.sh` : verdict du dernier
+      `diag-cle`, empreinte et sel transmis ; `make doctor` (smartctl facultatif) ; `make deploy-test`.
+- [ ] R7 rapport de run `docs/developpement/rapport-run-0.2.md`.
+
 - [ ] Image : GNOME Logiciels sans service résident, sans écraser `/etc/xdg/autostart` du squashfs
       (méthode à choisir et à consigner).
 

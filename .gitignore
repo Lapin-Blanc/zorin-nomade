@@ -9,3 +9,7 @@ config/local.env
 *.qcow2
 *.iso
 *.part
+__pycache__/
+*.pyc
+diagnostics/archives/
+diagnostics/.sel

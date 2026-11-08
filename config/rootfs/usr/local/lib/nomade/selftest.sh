@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # zorin-nomade — autotest de l'image (SPEC E-35, E-36).
 #
-# Ne s'exécute que dans une VM QEMU lancée par scripts/test-image.sh, qui expose via fw_cfg :
+# Mode « matériel » (selftest.sh --materiel, root) : sur une clé déployée, appelé par nomade-diag
+# (E-46) ; sans fw_cfg ni port série ni extinction, Secure Boot non imposé, déploiement lu dans
+# /etc/nomade/deploy-info.
+# Sinon, ne s'exécute que dans une VM QEMU lancée par scripts/test-image.sh, qui expose via fw_cfg :
 #   opt/nomade/selftest = 1        active l'autotest
 #   opt/nomade/expect_sb = on|off  état Secure Boot attendu
 #   opt/nomade/poweroff = 1        éteint la VM après le rapport
@@ -12,12 +15,24 @@
 # Ajoute une ligne « check » pour chaque exigence vérifiable de SPEC.md.
 set -u
 
-FW=/sys/firmware/qemu_fw_cfg/by_name/opt/nomade
-modprobe qemu_fw_cfg 2>/dev/null || true
-for _ in 1 2 3 4 5; do [[ -r $FW/selftest/raw ]] && break; sleep 1; done
-[[ -r $FW/selftest/raw ]] || exit 0
-
-fwval() { cat "$FW/$1/raw" 2>/dev/null || true; }
+MATERIEL=0
+[[ "${1:-}" == --materiel ]] && MATERIEL=1
+if ((MATERIEL)); then
+  [[ $EUID -eq 0 ]] || { echo "selftest.sh --materiel : root requis" >&2; exit 1; }
+  fwval() {
+    case "$1" in
+      deployed) if [[ -s /etc/nomade/deploy-info ]]; then echo 1; fi ;;
+      expect_usb) sed -n 's/^DEPLOY_USB_ID=//p' /etc/nomade/deploy-info 2>/dev/null ;;
+      *) ;;                                   # expect_sb, poweroff : sans objet sur du matériel
+    esac
+  }
+else
+  FW=/sys/firmware/qemu_fw_cfg/by_name/opt/nomade
+  modprobe qemu_fw_cfg 2>/dev/null || true
+  for _ in 1 2 3 4 5; do [[ -r $FW/selftest/raw ]] && break; sleep 1; done
+  [[ -r $FW/selftest/raw ]] || exit 0
+  fwval() { cat "$FW/$1/raw" 2>/dev/null || true; }
+fi
 
 # Valeurs attendues (écrites au build, SPEC E-08), avec des valeurs par défaut.
 TARGET_HOSTNAME=zorin-nomade TARGET_USER=fabien TARGET_LOCALE=fr_BE.UTF-8
@@ -26,6 +41,7 @@ TARGET_KEYMAP=be TARGET_TIMEZONE=Europe/Brussels
 [[ -r /etc/nomade/expected.env ]] && source /etc/nomade/expected.env
 
 SERIAL=/dev/ttyS0
+((MATERIEL)) && SERIAL=/dev/null
 say() {
   printf 'NOMADE-SELFTEST: %s\n' "$*" >>"$SERIAL" 2>/dev/null || true
   printf 'NOMADE-SELFTEST: %s\n' "$*"
@@ -167,6 +183,27 @@ usb_power_on() {
   return 1
 }
 provisioning_unmap() { grep -qx unmap "/sys/block/$ROOT_DISK/device/scsi_disk/"*/provisioning_mode 2>/dev/null; }
+# NOMADE-DATA (E-44) : partition 4 du disque de la racine, exFAT, à la taille de deploy-info
+DATA_MNT=/media/NOMADE-DATA
+data_fstab() { grep -Eq "^UUID=[0-9A-F]{4}-[0-9A-F]{4}[[:space:]]+${DATA_MNT}[[:space:]]+exfat[[:space:]].*nofail" /etc/fstab; }
+data_part() {
+  local src
+  src="$(findmnt -no SOURCE "$DATA_MNT" 2>/dev/null)"
+  [[ -n "$src" && "$(lsblk -ndo PKNAME "$src")" == "$ROOT_DISK" && "$(lsblk -ndo PARTN "$src" | tr -d ' ')" == 4 ]] || return 1
+  [[ "$(blkid -s LABEL -o value "$src")" == NOMADE-DATA ]]
+}
+data_size_ok() {
+  local src want
+  src="$(findmnt -no SOURCE "$DATA_MNT" 2>/dev/null)" want="$(deploy_val DEPLOY_DATA_GIB)"
+  [[ -n "$src" && "$want" =~ ^[0-9]+$ ]] || return 1
+  (( $(blockdev --getsize64 "$src") / 1048576 >= want * 1024 - 2 \
+     && $(blockdev --getsize64 "$src") / 1048576 <= want * 1024 + 2 ))
+}
+data_owned() { findmnt -no OPTIONS "$DATA_MNT" | tr ',' '\n' | grep -qx "uid=$(id -u "$TARGET_USER")"; }
+data_user_writes() {
+  # shellcheck disable=SC2016  # $1 et $$ s'évaluent dans le sh de l'utilisateur
+  runuser -u "$TARGET_USER" -- sh -c 'f="$1/.nomade-selftest.$$" && echo ok >"$f" && rm "$f"' sh "$DATA_MNT"
+}
 no_live_user() { ! getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' | grep -vqx "$TARGET_USER"; }
 
 # --- Démarrage -------------------------------------------------------------------
@@ -300,6 +337,7 @@ for u in smartd.service NetworkManager-wait-online.service whoopsie.service whoo
   check E-40 "$u désactivé" unit_off "$u"
 done
 check E-40 "unattended-upgrades conservé (D-022)" pkg_installed unattended-upgrades
+check E-44 "exfatprogs installé (fsck.exfat, D-046)" pkg_installed exfatprogs
 for u in secureboot-db.service fwupd.service fwupd-refresh.timer; do
   check E-43 "$u masqué (aucune écriture dans le firmware de l'hôte)" unit_masked "$u"
 done
@@ -320,6 +358,15 @@ if [[ "$DEPLOYED" == 1 ]]; then
     check E-30 "initramfs : crypttab de la racine" initrd_has cryptroot/crypttab
     check E-30 "racine recréée à $(deploy_val DEPLOY_INODE_RATIO) octets par inode (D-041)" inode_ratio_ok
   fi
+  data_gib="$(deploy_val DEPLOY_DATA_GIB)"
+  if [[ "$data_gib" =~ ^[1-9][0-9]*$ ]]; then
+    check E-44 "fstab : NOMADE-DATA par UUID, nofail" data_fstab
+    check E-44 "NOMADE-DATA montée en exFAT" fstype_is "$DATA_MNT" exfat
+    check E-44 "NOMADE-DATA : partition 4 de la clé, étiquetée" data_part
+    check E-44 "NOMADE-DATA : $data_gib Gio" data_size_ok
+    check E-44 "NOMADE-DATA appartient à $TARGET_USER" data_owned
+    check E-44 "NOMADE-DATA inscriptible par $TARGET_USER sans mot de passe" data_user_writes
+  fi
   expect_usb="$(fwval expect_usb)"
   if [[ -n "$expect_usb" ]]; then
     check E-32 "règle udev pour le pont $expect_usb" usb_rule_for "$expect_usb"
@@ -330,6 +377,67 @@ if [[ "$DEPLOYED" == 1 ]]; then
       check E-32 "règle appliquée : provisioning_mode=unmap" provisioning_unmap
     fi
   fi
+fi
+
+# --- E-46 nomade-diag (pas en mode matériel : c'est nomade-diag qui appelle cet autotest) ---------
+# diag_verifie <archive> <valeur interdite…> : archive lisible, resume.json au schéma 1, anonymisé,
+# empreintes du PC et de la clé présentes, aucune des valeurs interdites nulle part.
+diag_verifie() {
+  python3 -I -B -c 'import sys
+sys.path.insert(0, "/usr/local/lib/nomade")
+from nomade_diag import archive
+f = archive.lire_tout(sys.argv[1])
+import json
+r = json.loads(f["resume.json"])
+assert r["schema"] == 1 and r["type"] == "systeme" and r["anonymise"] is True, "en-tête"
+assert r["pc"]["empreinte"] and r["cle"]["empreinte"], "empreintes"
+assert "rapport.txt" in f and "journal/noyau.txt" in f, "fichiers"
+for v in sys.argv[2:]:
+    for nom, t in f.items():
+        assert v.lower() not in t.lower(), "%s dans %s" % (v, nom)' "$@"
+}
+macs() { local n; for n in /sys/class/net/*; do [[ "${n##*/}" == lo ]] || cat "$n/address"; done 2>/dev/null; }
+if ((!MATERIEL)); then
+  check E-46 "lanceur « Diagnostic de la clé » dans le menu" \
+    grep -q '^Exec=gnome-terminal .*nomade-diag-terminal.sh' /usr/local/share/applications/nomade-diag.desktop
+  diag_args=(--test --mesures --ecriture-max 64)
+  diag_dir=/run/nomade-diag
+  if [[ "$DEPLOYED" == 1 && "$(deploy_val DEPLOY_DATA_GIB)" =~ ^[1-9] ]]; then
+    diag_dir=/media/NOMADE-DATA/nomade-diag      # sans --sortie : rapport rangé sur NOMADE-DATA
+  else
+    diag_args+=(--sortie "$diag_dir")
+  fi
+  rm -rf /run/nomade-diag
+  diag_rc=0
+  timeout 400 /usr/local/bin/nomade-diag "${diag_args[@]}" >/run/nomade-diag.log 2>&1 || diag_rc=$?
+  check E-46 "nomade-diag --test --mesures aboutit (code $diag_rc)" test "$diag_rc" = 0
+  diag_archive="$(find "$diag_dir" -maxdepth 1 -name 'nomade-diag-*.tar.zst' 2>/dev/null | sort | tail -n1)"
+  check E-46 "archive nomade-diag dans $diag_dir" test -s "$diag_archive"
+  mapfile -t interdits < <(macs; cat /etc/machine-id; echo "$TARGET_USER")
+  if [[ -n "$(fwval disk_serial)" ]]; then interdits+=("$(fwval disk_serial)"); fi
+  diag_autotest() {     # selftest.sh --materiel, lancé par nomade-diag, rapporté dans le résumé
+    python3 -I -B -c 'import sys
+sys.path.insert(0, "/usr/local/lib/nomade")
+from nomade_diag import archive
+a = archive.lire_resume(sys.argv[1])["systeme"]["autotest"]
+assert a["pass"] > 50, a' "$1"
+  }
+  check E-46 "autotest en mode matériel rapporté par nomade-diag" diag_autotest "$diag_archive"
+  check E-47 "archive anonymisée (série du disque, MAC, machine-id, utilisateur absents)" \
+    diag_verifie "$diag_archive" "${interdits[@]}"
+  if [[ -n "$diag_archive" ]]; then
+    say "INFO nomade-diag : $(tr '\n' ' ' </run/nomade-diag.log | grep -oE 'Alertes :.*' | head -c 300)"
+    say "INFO nomade-diag non lu : $(python3 -I -B -c 'import sys, json
+sys.path.insert(0, "/usr/local/lib/nomade")
+from nomade_diag import archive
+r = archive.lire_resume(sys.argv[1])
+print(json.dumps(r.get("non_lu"), ensure_ascii=False), "clé", (r.get("cle") or {}).get("empreinte"),
+      "mesures", json.dumps((r.get("mesures") or {}).get("ecriture"))[:160])' "$diag_archive" 2>&1 | head -c 400)"
+  fi
+  if [[ "$diag_dir" == /media/* ]]; then rm -f "$diag_archive"; fi
+  grep -aE 'ANONYMISATION|Traceback|Error' /run/nomade-diag.log 2>/dev/null | head -n 5 | while IFS= read -r l; do
+    say "LOG nomade-diag : $l"
+  done
 fi
 
 # --- Rapport --------------------------------------------------------------------

@@ -128,7 +128,7 @@ build_cmd() {
     -drive if=pflash,format=raw,unit=1,file="$dir/vars.fd"
     -device qemu-xhci,id=xhci
     -drive if=none,id=stick,format=qcow2,file="$dir/stick.qcow2"
-    -device usb-storage,bus=xhci.0,drive=stick,bootindex=0
+    -device usb-storage,bus=xhci.0,drive=stick,bootindex=0,serial=NOMADETEST0001
     -netdev user,id=n0 -device virtio-net-pci,netdev=n0
     -device virtio-rng-pci
     -vga virtio
@@ -189,6 +189,7 @@ run_selftest() {
     -fw_cfg name=opt/nomade/selftest,string=1
     -fw_cfg name=opt/nomade/poweroff,string=1
     -fw_cfg name=opt/nomade/expect_sb,string="$sb"
+    -fw_cfg name=opt/nomade/disk_serial,string=NOMADETEST0001
   )
   if ((encrypted)); then
     QEMU_CMD+=(-fw_cfg name=opt/nomade/deployed,string=1 -fw_cfg name=opt/nomade/expect_usb,string=46f4:0001)
