@@ -33,9 +33,9 @@ missing_pkgs=()
 for c in "${!pkg_of[@]}"; do
   if command -v "$c" >/dev/null 2>&1; then ok "$c"; else ko "$c manquant"; missing_pkgs+=("${pkg_of[$c]}"); fi
 done
-for c in shellcheck bmaptool cryptsetup; do
+for c in shellcheck bmaptool cryptsetup mkfs.exfat smartctl; do
   if command -v "$c" >/dev/null 2>&1; then ok "$c"
-  else note "$c absent (shellcheck : make lint ; bmaptool/cryptsetup : utiles pour make deploy)"; fi
+  else note "$c absent (shellcheck : make lint ; bmaptool, cryptsetup, mkfs.exfat [exfatprogs] : make deploy ; smartctl [smartmontools] : SMART dans make diag-cle)"; fi
 done
 if ((${#missing_pkgs[@]})); then
   mapfile -t missing_pkgs < <(printf '%s\n' "${missing_pkgs[@]}" | sort -u)

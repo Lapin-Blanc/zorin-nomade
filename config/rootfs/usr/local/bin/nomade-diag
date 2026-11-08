@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# nomade-diag — diagnostic du système déployé, depuis la clé (SPEC E-46, D-048).
+#
+#   nomade-diag [--mesures] [--ecriture-max MIO] [--brut] [--sortie DOSSIER]
+#
+# Relève le PC (firmware, Secure Boot, affichage, périphériques), le démarrage, la mémoire, les
+# écritures, les erreurs et la clé telle qu'elle se comporte sur ce PC ; range une archive
+# anonymisée sur NOMADE-DATA (sinon ~/nomade-diag). Rien n'est modifié sur le PC.
+# Partie session (rendu, son) sous l'utilisateur, puis partie système par sudo (mot de passe).
+# Utilisable aussi depuis un clone du dépôt : config/rootfs/usr/local/bin/nomade-diag.
+set -Eeuo pipefail
+ICI="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+DIAG="$ICI/../lib/nomade/diag.py"
+[[ -f "$DIAG" ]] || { echo "nomade-diag : $DIAG introuvable" >&2; exit 1; }
+if [[ $EUID -ne 0 ]]; then
+  session="$(mktemp -d "${TMPDIR:-/tmp}/nomade-diag.XXXXXX")"
+  python3 -I -B "$DIAG" systeme --phase session --session-dir "$session" || true
+  echo "nomade-diag : la partie système demande ton mot de passe (sudo)." >&2
+  exec sudo python3 -I -B "$DIAG" systeme --phase systeme --session-dir "$session" "$@"
+fi
+exec python3 -I -B "$DIAG" systeme --phase systeme "$@"

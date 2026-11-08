@@ -3,16 +3,18 @@
 Tenu à jour par Claude : ce qu'il ne peut pas faire lui-même (root sur l'hôte, matériel réel,
 décisions). Dernière mise à jour : 2026-11-08.
 
-## En cours : version 0.1.0-alpha
+## En cours : version 0.2.0-alpha (branche `retours-terrain`)
 
-1. ~~Déploiement réel sur une clé SSK de 128 Go~~ : fait le 2026-11-08, démarrage conforme (pont
-   VIA Labs `2109:0715`, sans TRIM : voir plus bas). Reste à supprimer la branche distante devenue inutile :
-   `git push origin --delete outil-alpha`.
-2. **Étiqueter la version** sur `main` une fois tout vert : dater la section 0.1.0-alpha de
-   `CHANGELOG.md`, puis `git tag -a v0.1.0-alpha -m "zorin-nomade 0.1.0-alpha" && git push --tags`
-   (ou demande-le à Claude).
-3. **Sur la clé**, points restants de `docs/premier-demarrage.md` : son, second écran, recherche par
-   nom, mise en veille, première `apt full-upgrade` (puis `sudo ls /boot/efi/EFI/BOOT`), essai sur un
+1. **Installer `smartmontools` sur l'hôte** (D-048) : `sudo apt install smartmontools`. Sans lui,
+   `make diag-cle` note SMART « non lu ».
+2. **Essais réels de la 0.2** (détail : `docs/developpement/rapport-run-0.2.md`, mode d'emploi :
+   `docs/diagnostic.md`) : `sudo make diag-cle KEY=…` sur les deux clés ; sur la 128 Go, `COMPLET=1`
+   puis `sudo make deploy KEY=…` (0.2, `NOMADE-DATA` de 11 Go) et « Diagnostic de la clé » sur quelques
+   PC ; sur la 1 To, `config/rootfs/usr/local/bin/nomade-diag` depuis le clone ; puis
+   `make diag-rapport SRC=/media/$USER/NOMADE-DATA/nomade-diag`.
+3. **Pousser la branche** `retours-terrain` et ouvrir la PR (CI à voir), ou me le demander.
+4. **Sur la clé de 1 To**, points restants de `docs/premier-demarrage.md` : son, second écran, recherche
+   par nom, mise en veille, première `apt full-upgrade` (puis `sudo ls /boot/efi/EFI/BOOT`), essai sur un
    PC avec Secure Boot actif (option « MS UEFI CA » si refus).
 
 ## État de l'hôte

@@ -10,3 +10,6 @@ mokutil
 # Réactivité (E-20, E-25) — noble/universe
 systemd-zram-generator
 profile-sync-daemon
+
+# NOMADE-DATA (E-44, D-046) : fsck.exfat au démarrage, mkfs.exfat pour déployer depuis une clé nomade
+exfatprogs

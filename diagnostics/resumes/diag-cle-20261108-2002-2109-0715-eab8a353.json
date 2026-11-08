@@ -1,0 +1,164 @@
+{
+  "schema": 1,
+  "type": "cle",
+  "outil": {
+    "nom": "diag-cle",
+    "version": "0.2.0-alpha"
+  },
+  "date": "2026-11-08T20:02:21+01:00",
+  "anonymise": true,
+  "options": {
+    "mode": "lecture",
+    "duree_ecriture_min": null,
+    "root": true
+  },
+  "cle": {
+    "empreinte": "eab8a3536c6aac5d",
+    "vid_pid": "2109:0715",
+    "identification": {
+      "role": "pont",
+      "nom": "VIA Labs VL715 (probablement), pont USB 3.2 Gen 2 vers SSD SATA",
+      "precision": "modele"
+    },
+    "hwdb": {
+      "fabricant": "VIA Labs, Inc.",
+      "produit": "VL817 SATA Adaptor"
+    },
+    "descripteur": {
+      "fabricant": "SSK Corporation",
+      "produit": "SSK USB3.2 SSD Flash Drive",
+      "modele_declare": "SSK_Portable_SSD_128GB"
+    },
+    "usb": {
+      "version": "3.10",
+      "vitesse_mbps": 10000,
+      "pilote": "usb-storage",
+      "bridee_usb2": false,
+      "concentrateur": false,
+      "quirk_usb_storage": null
+    },
+    "capacite_annoncee_gio": 119.2,
+    "secteur_logique": 512,
+    "secteur_physique": 512,
+    "transfert_max_kio": 1024,
+    "trim_declare": false,
+    "provisioning_mode": "full",
+    "file_commandes": 1,
+    "rotatif_declare": true,
+    "ordonnanceur": "mq-deadline",
+    "partitions": {
+      "nombre": 3,
+      "liste": [
+        {
+          "taille_gio": 1.0,
+          "fs": "vfat",
+          "nom": null
+        },
+        {
+          "taille_gio": 2.0,
+          "fs": "ext4",
+          "nom": "nomade-boot"
+        },
+        {
+          "taille_gio": 116.2,
+          "fs": "crypto_LUKS",
+          "nom": "nomade-root"
+        }
+      ],
+      "nomade": true
+    },
+    "smart": {
+      "type": "sat",
+      "modele": "SSK Portable SSD 128GB",
+      "sain": true,
+      "heures": 236,
+      "ecrit_gio": null,
+      "usure_pct": 0,
+      "reserve_pct": null,
+      "temperature_c": 27,
+      "ecrit_brut": {
+        "attribut": 241,
+        "nom": "Total_LBAs_Written",
+        "valeur": 37564
+      }
+    }
+  },
+  "lecture": {
+    "directes": true,
+    "sequentielle": {
+      "mo_s": 339.3,
+      "duree_s": 8.01,
+      "part_vide": 0.011
+    },
+    "aleatoire_1": {
+      "en_parallele": 1,
+      "operations": 38060,
+      "duree_s": 8.01,
+      "iops": 4751,
+      "mo_s": 19.46,
+      "mediane_us": 218,
+      "p90_us": 254,
+      "p99_us": 385,
+      "max_us": 3411,
+      "histogramme": [
+        0,
+        15870,
+        21989,
+        194,
+        3,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "part_vide": 0.454
+    },
+    "aleatoire_8": {
+      "en_parallele": 8,
+      "operations": 40622,
+      "duree_s": 8.01,
+      "iops": 5072,
+      "mo_s": 20.77,
+      "mediane_us": 1560,
+      "p90_us": 1834,
+      "p99_us": 2384,
+      "max_us": 28627,
+      "histogramme": [
+        0,
+        2,
+        307,
+        732,
+        37609,
+        1936,
+        24,
+        11,
+        1,
+        0
+      ],
+      "part_vide": 0.449
+    },
+    "gain_parallele": 1.07
+  },
+  "analyse": null,
+  "verdict": {
+    "categorie": "C-D",
+    "certitude": "estimee",
+    "texte": "Plutôt catégorie C ou D : contrôleur de type SSD. Un bon choix pour un système. Estimation à confirmer par l'analyse complète (COMPLET=1), qui mesure l'écriture.",
+    "deployable": true,
+    "alertes": [
+      {
+        "niveau": "info",
+        "texte": "Protocole usb-storage (BOT) : une commande à la fois, pas de TRIM ; le système fonctionnera, plus lentement sous charge."
+      },
+      {
+        "niveau": "info",
+        "texte": "TRIM non annoncé par le pont (deploy.sh fera l'essai)."
+      },
+      {
+        "niveau": "info",
+        "texte": "La clé se déclare rotative : corrigé par la règle udev au déploiement."
+      }
+    ]
+  }
+}

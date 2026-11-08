@@ -238,3 +238,79 @@ sur l'espace libre par fichier délié, sans effacer ; fiches lu/mesuré/déduit
 `fabricants-usb.txt` corrige deux erreurs de la journée : `090c:2320` est un Silicon Motion SM2320
 (contrôleur de SSD USB natif, pas un SSD NVMe derrière un pont), `2109:0715` probablement un VL715
 (le nom `lsusb` « VL817 » désigne un concentrateur). Corrigé dans README, PLAN, CHANGELOG, A-FAIRE.
+
+## 2026-11-08 18:00 — ouverture de la 0.2 et note de conception (branche `retours-terrain`)
+`PROJECT_VERSION=0.2.0-alpha`, « Non publié » dans `CHANGELOG.md` ; `docs/A-FAIRE-FABIEN.md` sans
+l'étiquette (posée) ni la branche distante `outil-alpha` (déjà absente de GitHub, vérifié par
+`git ls-remote`). Note `docs/developpement/conception-0.2.md` soumise à Fabien : `NOMADE-DATA` à 10 %
+(plancher 8 Gio) montée par `fstab` (UUID, `uid=1000`, `nofail`) et `exfatprogs` dans l'image ;
+`nomade-diag` réécrit en Python (bibliothèque standard) en reprenant de Fabrique-Clé la table des
+puces, le parcours sysfs et le protocole de mesure, pas le code Rust (lié à `disques`, `suivi`,
+`assistant` ; Rust ≥ 1.85 absent de Noble ; pas de `cargo` sur la clé) ; anonymisation sur liste
+blanche avec empreintes salées par clé ; `make diag-rapport` vers `docs/terrain.md`. Constats : l'image
+a `python3`, `jq`, `zstd`, `mokutil`, `dmidecode`, `mesa-utils`, mais ni `exfatprogs` ni `fio`.
+
+## 2026-11-08 18:30 — note de conception révisée : deux diagnostics
+Précision de Fabien : un diagnostic **depuis l'hôte, avant le déploiement**, pour éprouver la clé à
+fond, et un autre **depuis le système déployé**, qui sauvegarde son rapport. La première version ne
+prévoyait que le second. Ajouté : `make diag-cle KEY=…`, outil séparé de `deploy`, en lecture seule
+par défaut (identification sans root, lectures directes avec `sudo`, nouvelle garde
+`assert_usb_disk` sans saisie du numéro de série) et complet sur demande (`COMPLET=1`, garde
+`assert_real_usb_target` inchangée : capacité réelle, TRIM réel, écritures, cache SLC, remise à
+vide) ; essais sur loop et contrefaçon simulée par device-mapper dans la VM. Module Python commun aux
+deux outils ; empreinte de la clé calculée par l'hôte et transmise par `deploy-info`. `smartctl`
+absent de l'hôte (SMART facultatif).
+
+## 2026-11-08 18:45 — questions de la note tranchées (D-046 à D-049)
+Avec Fabien, une par une : plancher de 8 Gio et seuil de 40 Gio pour la racine ; `fstab` sur
+`/media/NOMADE-DATA` ; sel de l'hôte copié sur la clé ; résumés et `docs/terrain.md` versionnés ;
+lanceur dans le menu ; écritures de `nomade-diag` sur la racine, plafond 1 Gio ; écriture longue de
+`diag-cle` ramenée à **1 min** (proposé : 3) ; `smartmontools` sur l'hôte ; Python, `CLAUDE.md`
+élargi. Note, `PLAN.md`, `CLAUDE.md` et `docs/A-FAIRE-FABIEN.md` mis à jour. Prochaine étape :
+`NOMADE-DATA` (étape 1 de la note), sur feu vert.
+
+## 2026-11-08 18:50 — run 0.2 : R1 `NOMADE-DATA` validé
+`data_gib` (lib.sh) et ses 10 essais dans `make ci` ; `deploy.sh` : taille calculée, UUID exFAT,
+ligne `fstab` (`/media/NOMADE-DATA`, `uid`/`gid` lus dans la cible, `nofail`), `fsck.exfat` final ;
+`exfatprogs` dans l'image ; autotest E-44. `make all` : image `zorin-nomade-20261108-1822`, PASS Secure
+Boot activé et désactivé (81 s chacun). `make deploy-test RUNS=2` : 8 Gio (plancher) aux deux
+passages, PASS Secure Boot activé et désactivé, les 7 contrôles E-44 au vert (montage exFAT,
+partition 4, taille, propriétaire, écriture par l'utilisateur sans mot de passe). Constat :
+`load_env` réécrit les variables passées par l'environnement (les surcharges passent par
+`config/local.env`) ; les essais de `make ci` appliquent donc les leurs après `load_env`.
+
+## 2026-11-08 19:00 — run 0.2 : R2-R3 `diag-cle` validé dans la VM
+`make diag-cle-test` : 25 essais au vert du premier coup (lecture seule : fichier de 1 Gio inchangé au
+SHA-256 près ; analyse complète : 257/257 marqueurs, TRIM réel, premier et dernier Mio à zéro ;
+contrefaçon device-mapper 1 Gio sur 512 Mio : repliement détecté, « ne pas déployer » ; refus des
+gardes hors mode test). Incident : le `make image` suivant a échoué à l'envoi du dépôt, `diag-cle`
+lancé en root avait créé `/work/repo/diagnostics/` au nom de root. Corrigé : `diag-cle.sh` crée
+toujours `diagnostics/` au nom de l'appelant de `sudo` (comme `deploy.sh`).
+
+## 2026-11-08 19:50 — run 0.2 : R4 à R7 validés, fin du run
+`nomade-diag` (collecte, anonymisation, lanceur, `selftest.sh --materiel`, `--mesures`), `make
+diag-rapport`, liens avec `deploy.sh` (empreinte, sel, verdict du dernier `diag-cle`), `make doctor`.
+Essais sur l'hôte en lecture seule (sections de collecte ; écriture plafonnée : 61 Mio pour 64) :
+`lscpu` répondait en français, d'où `LC_ALL=C.UTF-8` pour toutes les commandes. Image finale
+`zorin-nomade-20261108-1920` : `make test` PASS Secure Boot activé et désactivé (114 contrôles), dont E-46 (lanceur, archive,
+autotest en mode matériel rapporté) et E-47 (ni série repère du disque simulé, ni MAC, ni
+`machine-id`, ni nom d'utilisateur), aucune section « non lue ». `make deploy-test` PASS (136
+contrôles) : archive rangée sur `NOMADE-DATA`, empreinte de la clé identique aux deux démarrages
+(reprise de `deploy-info`). Non essayés : SMART (ni `smartctl` sur l'hôte, ni pont dans la VM),
+mesures réelles. Commits `f48129f`, `5462ebe` et suivant ; rien n'est poussé.
+
+## 2026-11-08 20:45 — premiers diagnostics réels (clé de 128 Go, HP ProBook 450 G9)
+Par Fabien : `diag-cle` en lecture seule puis `COMPLET=1` sur la clé SSK de 128 Go (`2109:0715`),
+redéploiement en 0.2 (image `zorin-nomade-20261108-1920`), « Diagnostic de la clé » sur un HP ProBook
+450 G9, `make diag-rapport`. Mesures : lecture 352 Mo/s, 4 Kio 4 815 IOPS, gain ×8 1,06
+(`usb-storage` : une commande à la fois), écriture 4 Kio 14 Mo/s → catégorie C mesurée, chute du cache
+SLC après 6,2 Gio, capacité conforme, TRIM refusé par le pont (comme au déploiement). Le PC : Secure
+Boot actif, les deux CA Microsoft (2011 et 2023) dans db, i915, Wi-Fi rtw89 fonctionnel, démarrage
+15,2 + 6,7 + 14,5 (phrase comprise) + 11,9 s, aucune alerte. Empreinte de la clé identique dans les
+deux diagnostics : le lien par `deploy-info` marche. Deux défauts corrigés : (1) `diag-rapport`
+refusait le résumé `nomade-diag` pour un « courriel » qui était l'unité `user@1000.service` ; le motif
+ignore désormais les unités systemd instanciées ; (2) SMART relayé par le pont (`-d sat`, modèle « SSK
+Portable SSD 128GB »), mais l'attribut 241 (37 564) n'est pas en secteurs (18 Mio en 236 h) : valeur
+brute gardée (`ecrit_brut`), conversion seulement si l'unité est connue ou plausible ; les deux résumés
+`diag-cle` déjà rangés ont eu leur bloc SMART recalculé depuis leur `smart.json` brut. Relevé au
+passage : `gnome-software` reste en mémoire (ligne de la 0.2 dans `PLAN.md`).

@@ -7,7 +7,7 @@
 #                   --usb-id 46f4:0001 --secrets-stdin      (dans la VM de build uniquement)
 #
 # Étapes : garde-fous (lib.sh) → secrets saisis → pont USB et essai de TRIM → effacement →
-# bmaptool → table GPT agrandie (+ partition exFAT NOMADE-DATA si DEPLOY_DATA_GIB > 0) →
+# bmaptool → table GPT agrandie (+ partition exFAT NOMADE-DATA, D-046 : data_gib dans lib.sh) →
 # racine : LUKS2 recréé (D-035) ou agrandie en clair → chroot : crypttab, mot de passe, règle udev,
 # initramfs, GRUB → contrôles finaux → checklist du premier démarrage.
 #
@@ -42,7 +42,6 @@ if [[ "$TEST" != 1 ]] && [[ -n "$USB_ID" || "$SECRETS_STDIN" == 1 ]]; then
 fi
 require_cmd bmaptool sgdisk partx losetup blkid blockdev wipefs blkdiscard cryptsetup \
             mkfs.ext4 e2fsck resize2fs rsync fsck.vfat chroot findmnt udevadm sha256sum
-if ((DEPLOY_DATA_GIB > 0)); then require_cmd mkfs.exfat; fi
 if [[ ! "$DEPLOY_INODE_RATIO" =~ ^[0-9]+$ ]] || ((DEPLOY_INODE_RATIO < 4096)); then
   die "DEPLOY_INODE_RATIO invalide : $DEPLOY_INODE_RATIO (octets par inode, ≥ 4096)"
 fi
@@ -97,8 +96,15 @@ fi
 DISK_BYTES="$(blockdev --getsize64 "$DEV")"
 IMG_BYTES="$(stat -c %s "$IMAGE")"
 log "cible $DEV : $((DISK_BYTES / 1024 ** 3)) Gio ; image $(basename "$IMAGE") : $((IMG_BYTES / 1024 ** 3)) Gio"
-((DISK_BYTES >= IMG_BYTES + DEPLOY_DATA_GIB * 1024 ** 3 + 4 * 1024 ** 3)) \
-  || die "cible trop petite pour l'image (+ ${DEPLOY_DATA_GIB} Gio de données + 4 Gio de marge)"
+DATA_GIB="$(data_gib $((DISK_BYTES / 1024 ** 3)))"
+((DISK_BYTES >= IMG_BYTES + DATA_GIB * 1024 ** 3 + 4 * 1024 ** 3)) \
+  || die "cible trop petite pour l'image (+ ${DATA_GIB} Gio de données + 4 Gio de marge)"
+if ((DATA_GIB > 0)); then
+  require_cmd mkfs.exfat fsck.exfat
+  log "partition NOMADE-DATA prévue : $DATA_GIB Gio"
+else
+  log "pas de partition NOMADE-DATA"
+fi
 
 # Sur la vraie machine, GNOME monterait les partitions dès leur apparition : udisks les ignore
 # pendant le déploiement (règle temporaire dans /run, retirée à la fin).
@@ -117,6 +123,30 @@ unmount_target() {
     umount "$p"
   done < <(lsblk -nrpo MOUNTPOINT "$DEV" | awk NF)
 }
+
+# --------------------------------------------------------------------------------------------
+# Empreinte de la clé (sel de l'hôte, D-049) et verdict du dernier « make diag-cle » (D-048)
+DIAG_PY="$NOMADE_ROOT/config/rootfs/usr/local/lib/nomade/diag.py"
+DIAG_SEL="$NOMADE_ROOT/diagnostics/.sel"
+CLE_EMPREINTE=""
+if command -v python3 >/dev/null 2>&1; then
+  install -d -o "${SUDO_UID:-0}" -g "${SUDO_GID:-0}" "$NOMADE_ROOT/diagnostics"
+  CLE_EMPREINTE="$(python3 -I -B "$DIAG_PY" empreinte-cle --disque "$DEV" --sel "$DIAG_SEL" \
+                     --uid "${SUDO_UID:-0}" --gid "${SUDO_GID:-0}" 2>/dev/null || true)"
+fi
+if [[ "$CLE_EMPREINTE" =~ ^[0-9a-f]{16}$ ]]; then
+  verdict_rc=0
+  verdict="$(python3 -I -B "$DIAG_PY" verdict-cle --depot "$NOMADE_ROOT" --empreinte "$CLE_EMPREINTE" 2>/dev/null)" \
+    || verdict_rc=$?
+  case "$verdict_rc" in
+    0) log "dernier diag-cle de cette clé : $verdict" ;;
+    2) warn "dernier diag-cle de cette clé : $verdict" ;;
+    *) log "aucun diag-cle de cette clé (avant de déployer : sudo make diag-cle KEY=…)" ;;
+  esac
+else
+  CLE_EMPREINTE=""
+  warn "empreinte de la clé non calculée (python3 ?) : les diagnostics ne pourront pas être reliés"
+fi
 
 # --------------------------------------------------------------------------------------------
 step "Secrets (E-30, E-31)"
@@ -213,13 +243,13 @@ p3_start="$(sgdisk -i 3 "$DEV" | awk '/^First sector:/ { print $3 }')"
 p3_guid="$(sgdisk -i 3 "$DEV" | awk '/^Partition unique GUID:/ { print $4 }')"
 last="$(sgdisk -E "$DEV" 2>/dev/null | tail -n 1)"
 [[ "$p3_start" =~ ^[0-9]+$ && "$last" =~ ^[0-9]+$ ]] || die "lecture de la table GPT impossible"
-if ((DEPLOY_DATA_GIB > 0)); then
-  p3_end=$(( ((last + 1 - DEPLOY_DATA_GIB * 2097152) / 2048) * 2048 - 1 ))
+if ((DATA_GIB > 0)); then
+  p3_end=$(( ((last + 1 - DATA_GIB * 2097152) / 2048) * 2048 - 1 ))
 else
   p3_end=$(( ((last + 1) / 2048) * 2048 - 1 ))   # multiple de 1 Mio (secteurs LUKS de 4 Kio)
 fi
 sgdisk -d 3 -n "3:$p3_start:$p3_end" -t 3:8300 -c 3:nomade-root -u "3:$p3_guid" "$DEV" >/dev/null
-if ((DEPLOY_DATA_GIB > 0)); then
+if ((DATA_GIB > 0)); then
   sgdisk -n "4:$((p3_end + 1)):$last" -t 4:0700 -c 4:NOMADE-DATA "$DEV" >/dev/null
 fi
 # Relecture de la table par le noyau (disque USB ou loop -P)
@@ -276,9 +306,14 @@ else
   resize2fs "$P3" 2>&1 | tail -n 1 >&2
   mount "$P3" "$MNT"
 fi
-if ((DEPLOY_DATA_GIB > 0)); then
+DATA_UUID=""
+if ((DATA_GIB > 0)); then
+  [[ -b "$P4" ]] || die "partition $P4 absente après relecture de la table"
   mkfs.exfat -L NOMADE-DATA "$P4" >/dev/null
-  log "partition de données exFAT NOMADE-DATA : ${DEPLOY_DATA_GIB} Gio"
+  udevadm settle 2>/dev/null || true
+  DATA_UUID="$(blkid -s UUID -o value "$P4")"
+  [[ "$DATA_UUID" =~ ^[0-9A-F]{4}-[0-9A-F]{4}$ ]] || die "UUID exFAT de $P4 illisible : ${DATA_UUID:-vide}"
+  log "partition de données exFAT NOMADE-DATA : ${DATA_GIB} Gio (UUID $DATA_UUID)"
 fi
 
 # --------------------------------------------------------------------------------------------
@@ -300,6 +335,18 @@ if [[ -n "$LUKS_UUID" ]]; then
 # <nom>      <périphérique>                                  <clé>  <options>
 nomade-root  UUID=$LUKS_UUID  none   luks,discard,initramfs
 EOF
+fi
+
+# E-44 (D-046) : NOMADE-DATA montée au démarrage pour l'utilisateur, sans mot de passe, par UUID
+# (deux clés nomade branchées porteraient la même étiquette) ; nofail : jamais bloquante. La fstab
+# vient de l'image (E-07) : la ligne est retirée puis remise, le déploiement reste rejouable.
+sed -i '\|[[:space:]]/media/NOMADE-DATA[[:space:]]|d' "$MNT/etc/fstab"
+if [[ -n "$DATA_UUID" ]]; then
+  data_uid="$(in_target id -u "$TARGET_USER")" data_gid="$(in_target id -g "$TARGET_USER")"
+  install -d -m 755 "$MNT/media/NOMADE-DATA"
+  printf 'UUID=%s  /media/NOMADE-DATA  exfat  %s  0  2\n' "$DATA_UUID" \
+    "nofail,x-systemd.device-timeout=5s,noatime,uid=$data_uid,gid=$data_gid,dmask=0022,fmask=0133,errors=remount-ro,x-gvfs-show,x-gvfs-name=NOMADE-DATA" \
+    >>"$MNT/etc/fstab"
 fi
 
 # E-31 : mot de passe de l'utilisateur (le compte était verrouillé dans l'image)
@@ -335,10 +382,17 @@ DEPLOY_ENCRYPT=$DEPLOY_ENCRYPT
 DEPLOY_USB_ID=$VIDPID
 DEPLOY_USB_DRIVER=${USB_DRIVER:-inconnu}
 DEPLOY_DISCARD=$DISCARD_OK
-DEPLOY_DATA_GIB=$DEPLOY_DATA_GIB
+DEPLOY_DATA_GIB=$DATA_GIB
+DEPLOY_DATA_PCT=$DEPLOY_DATA_PCT
 DEPLOY_INODE_RATIO=$DEPLOY_INODE_RATIO
+DEPLOY_CLE_EMPREINTE=$CLE_EMPREINTE
 DEPLOY_TEST=$TEST
 EOF
+# Sel des empreintes de diagnostic (D-049) : celui de l'hôte, pour que nomade-diag reconnaisse un
+# même PC d'une clé à l'autre ; sur la racine (chiffrée), lisible par root seul.
+if [[ -s "$DIAG_SEL" ]]; then
+  install -D -m 600 -o root -g root "$DIAG_SEL" "$MNT/var/lib/nomade/diag-sel"
+fi
 
 # E-33 : initramfs (crypttab, clavier belge) et GRUB avec les UUID finaux
 in_target update-initramfs -u -k all 2>&1 | grep -vE '^\s*$' | tail -n 5 >&2
@@ -371,6 +425,7 @@ for d in "$P2" ${OPENED:+"/dev/mapper/$OPENED"}; do
 done
 if [[ -z "$OPENED" ]]; then e2fsck -f -n "$P3" >/dev/null 2>&1 || die "e2fsck $P3 : erreurs"; fi
 fsck.vfat -n "$P1" >/dev/null || die "fsck.vfat $P1 : erreurs"
+if [[ -n "$DATA_UUID" ]]; then fsck.exfat -n "$P4" >/dev/null || die "fsck.exfat $P4 : erreurs"; fi
 if [[ -n "$OPENED" ]]; then cryptsetup close "$OPENED"; OPENED=""; fi
 sync
 log "contrôles : systèmes de fichiers sains, chemin amovible présent"
@@ -388,7 +443,8 @@ cat >&2 <<EOF
    3. Connexion en « $TARGET_USER » avec le mot de passe choisi ; Wi-Fi, son, écran.
    4. Contrôles : lsusb -t (attendu : ${USB_DRIVER:-uas ou usb-storage}), lsblk --discard ($( ((DISCARD_OK)) && echo 'valeurs non nulles' || echo 'zéros : pas de TRIM par ce pont' )),
       sudo fstrim -v /, swapon, psd p, cat /sys/block/sdX/queue/rotational (0),
-      journalctl -k | grep -iE 'uas_eh|reset', cat /etc/nomade/deploy-info.
+      journalctl -k | grep -iE 'uas_eh|reset', cat /etc/nomade/deploy-info$( ((DATA_GIB > 0)) && echo ',
+      NOMADE-DATA ('"$DATA_GIB"' Gio) visible dans Fichiers et inscriptible sans mot de passe' ).
    5. Essayer un PC avec Secure Boot actif et un PC sans.
   ────────────────────────────────────────────────────────────────────────────────────────────
 EOF

@@ -1,0 +1,716 @@
+{
+  "schema": 1,
+  "type": "cle",
+  "outil": {
+    "nom": "diag-cle",
+    "version": "0.2.0-alpha"
+  },
+  "date": "2026-11-08T20:07:47+01:00",
+  "anonymise": true,
+  "options": {
+    "mode": "complet",
+    "duree_ecriture_min": 1.0,
+    "root": true
+  },
+  "cle": {
+    "empreinte": "eab8a3536c6aac5d",
+    "vid_pid": "2109:0715",
+    "identification": {
+      "role": "pont",
+      "nom": "VIA Labs VL715 (probablement), pont USB 3.2 Gen 2 vers SSD SATA",
+      "precision": "modele"
+    },
+    "hwdb": {
+      "fabricant": "VIA Labs, Inc.",
+      "produit": "VL817 SATA Adaptor"
+    },
+    "descripteur": {
+      "fabricant": "SSK Corporation",
+      "produit": "SSK USB3.2 SSD Flash Drive",
+      "modele_declare": "SSK_Portable_SSD_128GB"
+    },
+    "usb": {
+      "version": "3.10",
+      "vitesse_mbps": 10000,
+      "pilote": "usb-storage",
+      "bridee_usb2": false,
+      "concentrateur": false,
+      "quirk_usb_storage": null
+    },
+    "capacite_annoncee_gio": 119.2,
+    "secteur_logique": 512,
+    "secteur_physique": 512,
+    "transfert_max_kio": 1024,
+    "trim_declare": false,
+    "provisioning_mode": "full",
+    "file_commandes": 1,
+    "rotatif_declare": true,
+    "ordonnanceur": "mq-deadline",
+    "partitions": {
+      "nombre": 3,
+      "liste": [
+        {
+          "taille_gio": 1.0,
+          "fs": "vfat",
+          "nom": null
+        },
+        {
+          "taille_gio": 2.0,
+          "fs": "ext4",
+          "nom": "nomade-boot"
+        },
+        {
+          "taille_gio": 116.2,
+          "fs": "crypto_LUKS",
+          "nom": "nomade-root"
+        }
+      ],
+      "nomade": true
+    },
+    "smart": {
+      "type": "sat",
+      "modele": "SSK Portable SSD 128GB",
+      "sain": true,
+      "heures": 236,
+      "ecrit_gio": null,
+      "usure_pct": 0,
+      "reserve_pct": null,
+      "temperature_c": 35,
+      "ecrit_brut": {
+        "attribut": 241,
+        "nom": "Total_LBAs_Written",
+        "valeur": 37564
+      }
+    }
+  },
+  "lecture": {
+    "directes": true,
+    "sequentielle": {
+      "mo_s": 351.7,
+      "duree_s": 8.0,
+      "part_vide": 0.01
+    },
+    "aleatoire_1": {
+      "en_parallele": 1,
+      "operations": 38557,
+      "duree_s": 8.01,
+      "iops": 4815,
+      "mo_s": 19.72,
+      "mediane_us": 217,
+      "p90_us": 253,
+      "p99_us": 285,
+      "max_us": 3563,
+      "histogramme": [
+        0,
+        16009,
+        22483,
+        58,
+        2,
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      "part_vide": 0.451
+    },
+    "aleatoire_8": {
+      "en_parallele": 8,
+      "operations": 40939,
+      "duree_s": 8.01,
+      "iops": 5112,
+      "mo_s": 20.94,
+      "mediane_us": 1565,
+      "p90_us": 1786,
+      "p99_us": 2183,
+      "max_us": 14090,
+      "histogramme": [
+        0,
+        2,
+        224,
+        936,
+        38889,
+        865,
+        19,
+        4,
+        0,
+        0
+      ],
+      "part_vide": 0.453
+    },
+    "gain_parallele": 1.06
+  },
+  "analyse": {
+    "directes": true,
+    "capacite": {
+      "marqueurs": 478,
+      "corrects": 478,
+      "fiable_gio": 119.24,
+      "repliement": false,
+      "erreurs": 0,
+      "conforme": true
+    },
+    "trim_reel": false,
+    "zeros_apres_trim": null,
+    "ecriture_4k_1": {
+      "en_parallele": 1,
+      "operations": 34950,
+      "duree_s": 10.01,
+      "iops": 3490,
+      "mo_s": 14.3,
+      "mediane_us": 120,
+      "p90_us": 133,
+      "p99_us": 7762,
+      "max_us": 81658,
+      "histogramme": [
+        0,
+        34102,
+        188,
+        58,
+        26,
+        38,
+        423,
+        89,
+        14,
+        12
+      ]
+    },
+    "ecriture_4k_8": {
+      "en_parallele": 8,
+      "operations": 34655,
+      "duree_s": 10.02,
+      "iops": 3459,
+      "mo_s": 14.17,
+      "mediane_us": 947,
+      "p90_us": 8350,
+      "p99_us": 13192,
+      "max_us": 73515,
+      "histogramme": [
+        0,
+        24,
+        2061,
+        21604,
+        5860,
+        272,
+        3009,
+        1634,
+        95,
+        96
+      ]
+    },
+    "ecriture_synchro": {
+      "en_parallele": 1,
+      "operations": 10223,
+      "duree_s": 10.06,
+      "iops": 1016,
+      "mo_s": 4.16,
+      "mediane_us": 852,
+      "p90_us": 879,
+      "p99_us": 3111,
+      "max_us": 59680,
+      "histogramme": [
+        0,
+        0,
+        1744,
+        7981,
+        311,
+        149,
+        11,
+        0,
+        5,
+        22
+      ]
+    },
+    "ecriture_longue": {
+      "ecrit_gio": 8.02,
+      "duree_s": 60.0,
+      "mo_s": 143.4,
+      "debit_debut_mo_s": 438.6,
+      "debit_fin_mo_s": 44.2,
+      "chute_apres_gio": 6.21,
+      "points": [
+        [
+          0.151,
+          298.3
+        ],
+        [
+          0.382,
+          453.9
+        ],
+        [
+          0.608,
+          452.2
+        ],
+        [
+          0.839,
+          455.2
+        ],
+        [
+          1.065,
+          451.5
+        ],
+        [
+          1.292,
+          452.5
+        ],
+        [
+          1.518,
+          450.5
+        ],
+        [
+          1.741,
+          438.6
+        ],
+        [
+          1.959,
+          429.7
+        ],
+        [
+          2.177,
+          432.4
+        ],
+        [
+          2.395,
+          431.1
+        ],
+        [
+          2.613,
+          430.4
+        ],
+        [
+          2.831,
+          430.2
+        ],
+        [
+          3.049,
+          435.7
+        ],
+        [
+          3.272,
+          439.6
+        ],
+        [
+          3.456,
+          367.0
+        ],
+        [
+          3.67,
+          425.0
+        ],
+        [
+          3.88,
+          416.8
+        ],
+        [
+          4.102,
+          439.3
+        ],
+        [
+          4.32,
+          433.6
+        ],
+        [
+          4.542,
+          440.0
+        ],
+        [
+          4.765,
+          440.1
+        ],
+        [
+          4.987,
+          439.0
+        ],
+        [
+          5.209,
+          440.2
+        ],
+        [
+          5.432,
+          439.8
+        ],
+        [
+          5.654,
+          438.3
+        ],
+        [
+          5.876,
+          442.8
+        ],
+        [
+          6.099,
+          438.4
+        ],
+        [
+          6.317,
+          435.5
+        ],
+        [
+          6.501,
+          366.8
+        ],
+        [
+          6.673,
+          340.2
+        ],
+        [
+          6.744,
+          123.2
+        ],
+        [
+          6.765,
+          34.4
+        ],
+        [
+          6.782,
+          31.8
+        ],
+        [
+          6.799,
+          33.5
+        ],
+        [
+          6.812,
+          18.8
+        ],
+        [
+          6.828,
+          28.1
+        ],
+        [
+          6.841,
+          21.8
+        ],
+        [
+          6.862,
+          33.1
+        ],
+        [
+          6.879,
+          26.5
+        ],
+        [
+          6.895,
+          26.9
+        ],
+        [
+          6.912,
+          27.7
+        ],
+        [
+          6.925,
+          23.3
+        ],
+        [
+          6.937,
+          21.4
+        ],
+        [
+          6.95,
+          22.4
+        ],
+        [
+          7.025,
+          150.4
+        ],
+        [
+          7.042,
+          25.6
+        ],
+        [
+          7.059,
+          29.2
+        ],
+        [
+          7.088,
+          56.9
+        ],
+        [
+          7.118,
+          56.6
+        ],
+        [
+          7.147,
+          57.6
+        ],
+        [
+          7.172,
+          49.5
+        ],
+        [
+          7.197,
+          50.3
+        ],
+        [
+          7.223,
+          47.7
+        ],
+        [
+          7.248,
+          44.9
+        ],
+        [
+          7.277,
+          47.7
+        ],
+        [
+          7.302,
+          45.8
+        ],
+        [
+          7.327,
+          43.4
+        ],
+        [
+          7.353,
+          43.8
+        ],
+        [
+          7.378,
+          45.1
+        ],
+        [
+          7.403,
+          43.9
+        ],
+        [
+          7.428,
+          44.6
+        ],
+        [
+          7.453,
+          45.2
+        ],
+        [
+          7.478,
+          44.6
+        ],
+        [
+          7.504,
+          43.2
+        ],
+        [
+          7.529,
+          44.8
+        ],
+        [
+          7.554,
+          43.8
+        ],
+        [
+          7.579,
+          45.2
+        ],
+        [
+          7.6,
+          41.9
+        ],
+        [
+          7.625,
+          44.9
+        ],
+        [
+          7.65,
+          43.8
+        ],
+        [
+          7.676,
+          45.8
+        ],
+        [
+          7.701,
+          44.9
+        ],
+        [
+          7.726,
+          45.4
+        ],
+        [
+          7.751,
+          43.8
+        ],
+        [
+          7.776,
+          37.6
+        ],
+        [
+          7.801,
+          44.0
+        ],
+        [
+          7.827,
+          44.8
+        ],
+        [
+          7.852,
+          43.6
+        ],
+        [
+          7.877,
+          42.7
+        ],
+        [
+          7.902,
+          47.5
+        ],
+        [
+          7.927,
+          42.9
+        ],
+        [
+          7.952,
+          45.6
+        ],
+        [
+          7.978,
+          45.4
+        ],
+        [
+          8.003,
+          43.0
+        ],
+        [
+          8.028,
+          44.8
+        ],
+        [
+          8.053,
+          43.4
+        ],
+        [
+          8.078,
+          45.9
+        ],
+        [
+          8.103,
+          43.0
+        ],
+        [
+          8.129,
+          43.7
+        ],
+        [
+          8.154,
+          46.8
+        ],
+        [
+          8.179,
+          44.1
+        ],
+        [
+          8.204,
+          46.4
+        ],
+        [
+          8.229,
+          43.6
+        ],
+        [
+          8.254,
+          44.6
+        ],
+        [
+          8.28,
+          45.1
+        ],
+        [
+          8.305,
+          44.0
+        ],
+        [
+          8.33,
+          47.8
+        ],
+        [
+          8.355,
+          42.8
+        ],
+        [
+          8.38,
+          43.1
+        ],
+        [
+          8.405,
+          46.2
+        ],
+        [
+          8.431,
+          44.3
+        ],
+        [
+          8.456,
+          44.1
+        ],
+        [
+          8.481,
+          43.8
+        ],
+        [
+          8.498,
+          33.5
+        ],
+        [
+          8.523,
+          45.4
+        ],
+        [
+          8.548,
+          44.2
+        ],
+        [
+          8.573,
+          44.1
+        ],
+        [
+          8.598,
+          44.6
+        ]
+      ]
+    },
+    "lecture_donnees": {
+      "en_parallele": 1,
+      "operations": 27984,
+      "duree_s": 6.01,
+      "iops": 4659,
+      "mo_s": 19.08,
+      "mediane_us": 216,
+      "p90_us": 248,
+      "p99_us": 263,
+      "max_us": 3489,
+      "histogramme": [
+        0,
+        6826,
+        21146,
+        6,
+        1,
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      "part_vide": 0.0
+    },
+    "remise_a_vide": "zeros"
+  },
+  "verdict": {
+    "categorie": "C",
+    "certitude": "mesuree",
+    "texte": "Catégorie C : contrôleur de type SSD. Un bon choix pour un système.",
+    "deployable": true,
+    "alertes": [
+      {
+        "niveau": "info",
+        "texte": "TRIM refusé à travers ce pont (blkdiscard, code 1 : blkdiscard: Operation forced, data will be lost!\nblkdiscard: BLKDISCARD: /dev/sda ioctl failed: Remote I/O error) : le système fonctionnera sans TRIM."
+      },
+      {
+        "niveau": "info",
+        "texte": "Protocole usb-storage (BOT) : une commande à la fois, pas de TRIM ; le système fonctionnera, plus lentement sous charge."
+      },
+      {
+        "niveau": "info",
+        "texte": "La clé se déclare rotative : corrigé par la règle udev au déploiement."
+      }
+    ]
+  }
+}

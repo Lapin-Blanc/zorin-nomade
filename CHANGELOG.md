@@ -6,7 +6,39 @@ Changements visibles de zorin-nomade, par version. Numérotation `MAJEUR.MINEUR.
 
 ## Non publié
 
-(rien pour l'instant)
+### Déploiement
+- Partition exFAT `NOMADE-DATA` créée par défaut : 10 % de la clé, au moins 8 Gio, aucune si la
+  racine passait sous 40 Gio (`DEPLOY_DATA_PCT`, `DEPLOY_DATA_MIN_GIB` ; `DEPLOY_DATA_GIB` impose une
+  taille, `0` la supprime). Montée au démarrage sur `/media/NOMADE-DATA` (par UUID, `nofail`),
+  inscriptible par l'utilisateur sans mot de passe, visible dans Fichiers (D-046).
+
+### Système produit
+- `exfatprogs` installé : vérification de `NOMADE-DATA` au démarrage, déploiement depuis une clé
+  nomade possible avec la partition.
+
+### Diagnostics (D-047 à D-049, `docs/diagnostic.md`)
+- `make diag-cle KEY=…` : diagnostic d'une clé avant le déploiement, depuis l'hôte. Identification
+  (puce d'après la table de Fabrique-Clé, pont, pilote, liaison, TRIM), SMART si `smartctl`, lectures
+  directes, sans rien écrire ; `COMPLET=1` : capacité réelle (contrefaçons), TRIM réel, écritures,
+  cache SLC, en effaçant la clé (`DUREE=` minutes d'écriture longue, 1 par défaut). Verdict A à D et
+  alertes ; `deploy` rappelle le verdict du dernier diagnostic de la clé.
+- `nomade-diag` sur la clé déployée, et lanceur « Diagnostic de la clé » dans le menu : PC, firmware et
+  Secure Boot (CA Microsoft présentes dans db), affichage, périphériques, la clé sur ce PC, démarrage,
+  mémoire, écritures, erreurs, autotest sur matériel réel ; `--mesures` (lectures, écritures plafonnées
+  à 1 Gio, AES). Rapport sur `NOMADE-DATA`.
+- Rapports anonymisés (empreintes salées, ni MAC, ni IP, ni noms), `resume.json` au schéma versionné ;
+  `make diag-rapport` les rassemble dans `docs/terrain.md`.
+- `deploy.sh` inscrit l'empreinte de la clé dans `deploy-info` et y copie le sel des empreintes.
+
+### Construction et tests
+- Autotest : contrôles E-44 de `NOMADE-DATA` (montage, taille, propriétaire, écriture par
+  l'utilisateur), E-46 et E-47 de `nomade-diag` (rapport produit, anonymisé : le numéro de série repère
+  du disque simulé, les MAC, le `machine-id` et le nom de l'utilisateur n'y figurent pas).
+- `make ci` essaie le calcul de la taille de `NOMADE-DATA`, les refus d'`assert_usb_disk` et les tests
+  unitaires des diagnostics (contrefaçon simulée, anonymisation, archive, rapport).
+- `make diag-cle-test` : `diag-cle` dans la VM de build (fichier inchangé en lecture seule, analyse
+  complète, contrefaçon simulée par device-mapper, refus des garde-fous).
+- `make doctor` signale `mkfs.exfat` et `smartctl` absents (facultatifs).
 
 ## 0.1.0-alpha — 2026-11-08
 

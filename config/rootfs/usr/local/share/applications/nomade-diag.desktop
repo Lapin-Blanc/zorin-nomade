@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Diagnostic de la clé
+Comment=Relève ce PC, le démarrage et la clé, et range un rapport anonymisé sur NOMADE-DATA
+Exec=gnome-terminal --title=Diagnostic -- /usr/local/lib/nomade/nomade-diag-terminal.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=diagnostic;nomade;clé;USB;matériel;

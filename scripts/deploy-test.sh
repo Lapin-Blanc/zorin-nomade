@@ -83,6 +83,8 @@ for ((i = 1; i <= runs; i++)); do
   # sur une cible qui porte déjà une table de partitions (2e passage).
   tail -n "+$((n0 + 1))" "$logf" | grep -aq 'TRIM : essai réussi' \
     || die "déploiement $i/$runs : l'essai de TRIM a échoué sur le fichier de test — journal : $logf"
+  tail -n "+$((n0 + 1))" "$logf" | grep -aq 'partition de données exFAT NOMADE-DATA' \
+    || die "déploiement $i/$runs : pas de partition NOMADE-DATA (E-44) — journal : $logf"
 done
 # Le journal ne doit contenir aucun secret
 if grep -aqF -e "$PASSPHRASE" -e "$PASSWORD" "$logf"; then die "un secret de test apparaît dans $logf"; fi

@@ -30,7 +30,7 @@ aléatoire 0,2 ms ; démarrage ≈ 40 s jusqu'à l'écran de connexion, firmware
   ```bash
   sudo apt install qemu-system-x86 qemu-system-gui qemu-utils ovmf cloud-image-utils \
                    openssh-client curl make git zstd shellcheck python3 \
-                   bmap-tools cryptsetup exfatprogs gdisk rsync dosfstools
+                   bmap-tools cryptsetup exfatprogs gdisk rsync dosfstools smartmontools
   sudo usermod -aG kvm "$USER"     # accès à /dev/kvm sans root, puis se reconnecter
   ```
 - `make doctor` vérifie les outils, KVM, OVMF, l'espace disque et le port de la VM de build ; il
@@ -48,6 +48,7 @@ cp config/local.env.example config/local.env   # puis y régler compte, langue, 
 make image           # construit out/latest.img (10 à 20 min)
 make test            # démarre l'image dans QEMU, Secure Boot activé puis désactivé
 ls -l /dev/disk/by-id/ | grep usb          # repérer la clé (disque entier, sans « -part »)
+sudo make diag-cle KEY=/dev/disk/by-id/usb-…  # que vaut cette clé ? (lecture seule)
 sudo make deploy KEY=/dev/disk/by-id/usb-…  # efface la clé et y déploie l'image
 ```
 Puis dérouler `docs/premier-demarrage.md` au premier démarrage de la clé. `make help` liste les cibles.
@@ -76,6 +77,21 @@ La VM se jette sans risque (`make builder-destroy`) : rien d'important n'y vit.
 - `make test-gui` : la même image dans une fenêtre, pour regarder.
 - `make deploy-test` : déploiement chiffré complet sur un fichier de 64 Gio dans la VM de build, rejoué
   deux fois, puis démarrage avec la phrase tapée au clavier virtuel (≈ 15 min).
+- `make diag-cle-test` : `diag-cle` dans la VM de build, sur fichier, loop et contrefaçon simulée.
+
+## Diagnostiquer — `make diag-cle`, `nomade-diag`, `make diag-rapport`
+
+Mode d'emploi complet : `docs/diagnostic.md`.
+
+- **Avant le déploiement**, `sudo make diag-cle KEY=…` dit ce que vaut une clé (puce, pont, liaison,
+  TRIM, SMART, lectures) sans rien y écrire ; `COMPLET=1` mesure aussi la capacité réelle et l'écriture,
+  **en effaçant la clé**. Verdict de A à D, que `deploy` rappelle ensuite.
+- **Sur la clé déployée**, menu « Diagnostic de la clé » (ou `nomade-diag` dans un terminal) : PC,
+  firmware et Secure Boot, affichage, démarrage, mémoire, erreurs ; le rapport va sur `NOMADE-DATA`.
+- **Sur l'hôte**, `make diag-rapport SRC=/media/$USER/NOMADE-DATA/nomade-diag` rassemble les rapports
+  dans `docs/terrain.md`.
+
+Les rapports sont anonymisés (numéros de série remplacés par une empreinte, ni MAC, ni IP, ni noms).
 
 ## Déployer sur une clé — `sudo make deploy KEY=…`
 
@@ -87,11 +103,15 @@ La VM se jette sans risque (`make builder-destroy`) : rien d'important n'y vit.
 2. demande la **phrase de passe LUKS** (deux fois, ASCII uniquement : elle se tape en clavier belge au
    démarrage) puis le **mot de passe** du compte ;
 3. essaie le TRIM à travers le pont USB, efface la clé, écrit l'image (`bmaptool`), agrandit la racine
-   jusqu'au bout de la clé (moins `DEPLOY_DATA_GIB` pour une partition exFAT `NOMADE-DATA` lisible sous
-   Windows), la recrée chiffrée en LUKS2 et y copie le système, règle l'initramfs, GRUB et la règle udev
+   jusqu'au bout de la clé, moins 10 % pour une partition exFAT `NOMADE-DATA` (au moins 8 Gio, lisible
+   sous Windows et macOS), la recrée chiffrée en LUKS2 et y copie le système, règle l'initramfs, GRUB et la règle udev
    du pont, contrôle tout, puis affiche les premiers points de `docs/premier-demarrage.md`.
 
-**Un déploiement efface toute la clé**, `/home` compris. Le déploiement peut se lancer depuis une autre
+Sur la clé, `NOMADE-DATA` est montée au démarrage sur `/media/NOMADE-DATA` (visible dans Fichiers),
+inscriptible sans mot de passe : de quoi échanger des fichiers avec un PC sous Windows ou macOS, où
+elle apparaît comme une clé ordinaire. Elle n'est pas chiffrée.
+
+**Un déploiement efface toute la clé**, `/home` et `NOMADE-DATA` compris. Le déploiement peut se lancer depuis une autre
 clé nomade, jamais vers le disque d'où le système a démarré.
 
 ### Paramètres principaux (`config/project.env`, surcharges dans `config/local.env`)
@@ -106,7 +126,8 @@ système (compte, langue, clavier, fuseau) comptent au `make image` suivant ; ce
 | `TARGET_USER`, `TARGET_HOSTNAME` | `fabien`, `zorin-nomade` | compte et nom de la machine |
 | `TARGET_LOCALE`, `TARGET_KEYMAP`, `TARGET_TIMEZONE` | `fr_BE.UTF-8`, `be`, `Europe/Brussels` | langue, clavier, fuseau |
 | `DEPLOY_ENCRYPT` | `1` | racine chiffrée en LUKS2 |
-| `DEPLOY_DATA_GIB` | `0` | taille de la partition exFAT `NOMADE-DATA` (0 : aucune) |
+| `DEPLOY_DATA_PCT`, `DEPLOY_DATA_MIN_GIB` | `10`, `8` | partition exFAT `NOMADE-DATA` : part de la clé, plancher (aucune si la racine passait sous 40 Gio) |
+| `DEPLOY_DATA_GIB` | (vide) | taille imposée de `NOMADE-DATA` en Gio ; `0` : aucune partition |
 | `DEPLOY_INODE_RATIO` | `65536` | octets par inode de la racine recréée |
 | `KEEP_IMAGES` | `2` | images gardées dans `out/` |
 
@@ -155,11 +176,12 @@ système (compte, langue, clavier, fuseau) comptent au `make image` suivant ; ce
 
 ## Intégration continue (GitHub Actions)
 
-- `lint.yml`, à chaque push : `make ci` (shellcheck et refus attendus des garde-fous).
+- `lint.yml`, à chaque push : `make ci` (shellcheck, refus attendus des garde-fous, tests des diagnostics).
 - `image.yml`, quand `scripts/`, `config/`, le `Makefile` ou le workflow changent, et à la demande
   (*Actions* → *image* → *Run workflow*) : construction directement sur le runner, puis `make test`.
   Artefact `diagnostic` : journaux, sortie série, captures, manifeste — pas l'image.
-- Restent locaux : `make deploy`, `make deploy-test`, `make test-gui`.
+  L'autotest y essaie aussi `nomade-diag` (rapport produit et anonymisé).
+- Restent locaux : `make deploy`, `make deploy-test`, `make test-gui`, `make diag-cle`, `make diag-cle-test`.
 
 ## Développement
 
@@ -181,6 +203,9 @@ builder/                                 cloud-init de la VM de build
 scripts/                                 lib, doctor, VM de build, ISO, build, tests, déploiement
 scripts/vm/                              scripts root (VM de build ou runner CI)
 docs/premier-demarrage.md                checklist d'une clé fraîchement déployée
+docs/diagnostic.md docs/terrain.md       diagnostics (mode d'emploi), données de terrain (générées)
+diagnostics/resumes/                     résumés anonymisés des diagnostics (archives : hors de git)
+tests/diag/                              tests unitaires des diagnostics (make ci)
 docs/JOURNAL.md docs/iso-notes.md        journal de développement, constats sur l'ISO
 docs/developpement/                      guide de développement, historique de la 0.1
 cache/ out/ .builder/ reference/         non versionnés

@@ -113,7 +113,12 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   USB, non monté, différent du disque système, affichage modèle/série/taille, **saisie du numéro
   de série** pour confirmer). En test : `assert_test_target` (fichier ou loop, `DEPLOY_TEST=1`).
 - E-29 Écriture de l'image avec `bmaptool`, puis **agrandissement** de la racine pour remplir la
-  clé (moins `DEPLOY_DATA_GIB` si > 0 : partition exFAT `NOMADE-DATA` en fin de clé).
+  clé, moins la partition exFAT `NOMADE-DATA` en fin de clé (E-44).
+- E-44 `NOMADE-DATA` créée par défaut : `DEPLOY_DATA_PCT` % de la clé (10), au moins
+  `DEPLOY_DATA_MIN_GIB` (8 Gio), aucune si la racine passait sous `IMAGE_ROOT_GIB` + 16 Gio ;
+  `DEPLOY_DATA_GIB` impose une taille (`0` : aucune). Montée par `fstab` (UUID, `nofail`) sur
+  `/media/NOMADE-DATA`, propriété de `TARGET_USER`, inscriptible sans mot de passe ; `exfatprogs` dans
+  l'image. (D-046)
 - E-30 Si `DEPLOY_ENCRYPT=1` (défaut) : racine en **LUKS2** dont la clé de volume est générée
   **sur la cible** (chiffrement en place ou recréation, au choix, à documenter) ; phrase de passe
   saisie par Fabien ; `discard` dans `crypttab` ; drapeaux persistants
@@ -129,6 +134,23 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   final (fsck, présence du chemin amovible), puis affichage de la checklist du premier démarrage.
 - E-34 Rejouable : relancer le déploiement sur la même clé repart proprement de zéro.
 
+## 7 bis. Diagnostics (D-047 à D-049, `docs/diagnostic.md`)
+
+- E-45 `make diag-cle KEY=…`, sur l'hôte, avant le déploiement, séparé de `deploy` : identification
+  sans root ; avec root, SMART (si `smartctl`) et lectures directes, **sans rien écrire**
+  (`assert_usb_disk`) ; `COMPLET=1` : analyse complète qui efface la clé (capacité réelle, TRIM réel,
+  écritures aléatoires et synchronisées, écriture longue de `DUREE` min, remise à vide), derrière
+  `assert_real_usb_target`. Verdict A à D et alertes. Essayé dans la VM de build seulement
+  (`make diag-cle-test` : fichier inchangé en lecture seule, contrefaçon simulée détectée).
+- E-46 `nomade-diag`, sur la clé déployée (lanceur « Diagnostic de la clé » dans le menu) : versions et
+  autotest sur matériel réel (`selftest.sh --materiel`), PC, firmware et Secure Boot (CA Microsoft dans
+  db), affichage, périphériques, la clé sur ce PC, démarrage, mémoire, écritures, erreurs ; mesures en
+  option, écritures plafonnées à 1 Gio. Rien n'est modifié sur le PC.
+- E-47 Rapports anonymisés par défaut (liste blanche pour `resume.json`, nettoyage des fichiers bruts,
+  empreintes HMAC salées par le sel de l'hôte, contrôle final avant écriture), archive
+  `.tar.zst` avec `resume.json` au schéma versionné ; `make diag-rapport` les rassemble dans
+  `docs/terrain.md`.
+
 ## 8. Tests
 
 - E-35 `make test` : démarrage de `out/latest.img` dans QEMU sur l'hôte (KVM, OVMF,
@@ -137,7 +159,7 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   `fw_cfg` (`opt/nomade/selftest`) et écrit ses résultats sur le port série
   (`NOMADE-SELFTEST: PASS|FAIL …`, puis `RESULT=PASS|FAIL`). Le harnais prend une capture d'écran.
 - E-36 L'autotest couvre au minimum les exigences E-02, E-07, E-09, E-10, E-12 à E-27,
-  E-39 à E-41 et E-43. Toute exigence vérifiable automatiquement doit y avoir une ligne.
+  E-39 à E-41, E-43, E-44, E-46 et E-47. Toute exigence vérifiable automatiquement doit y avoir une ligne.
 - E-37 `make deploy-test` : déploiement complet (chiffré) dans la VM de build vers un fichier
   creux de 64 Gio, puis démarrage de ce fichier dans QEMU sur l'hôte avec déverrouillage
   automatisé **propre au test** (aucune trace dans un système réellement déployé) : phrase tapée

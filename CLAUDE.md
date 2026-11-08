@@ -84,7 +84,8 @@ make test  (QEMU + OVMF sur l'hôte, sans root)  ◀──  out/*.img rapatriée
 - Les fichiers à copier dans le système cible vivent dans `config/rootfs/` (overlay).
   **N'écrase jamais à l'aveugle un fichier existant du squashfs** : s'il existe, fusionne
   et consigne la fusion dans `docs/iso-notes.md`.
-- Python autorisé pour l'outillage de test si c'est plus clair (toujours `python3 -I`).
+- Python autorisé pour l'outillage de test et de diagnostic (`diag-cle`, `nomade-diag`, `diag-rapport` :
+  bibliothèque standard seule, D-047), toujours `python3 -I`.
 
 ## Commandes longues
 
