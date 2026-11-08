@@ -8,10 +8,10 @@ Changements visibles de zorin-nomade, par version. Numérotation `MAJEUR.MINEUR.
 
 (rien pour l'instant)
 
-## 0.1.0-alpha — à étiqueter
+## 0.1.0-alpha — 2026-11-08
 
 Première version utilisable : construite et testée les 2026-11-07 et 08, déployée sur la clé SSK de
-Fabien et utilisée depuis le 2026-11-08. Date posée à l'étiquetage.
+Fabien (1 To) et utilisée depuis le 2026-11-08, puis sur une clé SSK de 128 Go (pont VIA VL817).
 
 ### Système produit
 - Zorin OS 18.1 Core installé à partir du squashfs de l'ISO officielle (SHA-256 vérifié), sans casper,

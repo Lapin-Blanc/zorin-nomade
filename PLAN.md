@@ -56,9 +56,10 @@ lint par shellcheck seul, puis CI GitHub.
 - [x] `deploy.sh` : pilote USB détecté (`DEPLOY_USB_DRIVER` dans `deploy-info`), récapitulatif final
       adapté (pilote attendu, TRIM ou non, `rotational`).
 - [x] PR #2 fusionnée après la PR #1 (`571a199`).
-- [ ] **Acceptation** : PR #1 et PR « outil » fusionnées, `make deploy-test` vert sur l'hôte ; Fabien pose
-      l'étiquette `v0.1.0-alpha` sur `main` (`git tag -a v0.1.0-alpha -m … && git push --tags`) et date
-      la version dans `CHANGELOG.md`.
+- [x] **Acceptation** : PR #1 et PR « outil » fusionnées, `make deploy-test` vert sur l'hôte ; étiquette
+      `v0.1.0-alpha` posée sur `main` à la demande de Fabien (2026-11-08), version datée dans
+      `CHANGELOG.md`. Réserve : « TRIM : essai réussi » depuis un vrai terminal reste à voir sur un pont
+      qui accepte le TRIM.
 
 ## 0.2 — retours du terrain
 
