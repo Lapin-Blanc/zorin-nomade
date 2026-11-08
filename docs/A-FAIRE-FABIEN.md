@@ -5,9 +5,10 @@ décisions). Dernière mise à jour : 2026-11-08.
 
 ## En cours : version 0.1.0-alpha
 
-1. **Fusionner les PR** : `make deploy-test RUNS=2` est vert sur l'hôte (2026-11-08, branche
-   `outil-alpha`, qui contient les PR #1 et #2). Reste ton accord pour fusionner la PR #1, puis la PR
-   « outil » (`outil-alpha`).
+1. **Déploiement réel sur une clé SSK de 128 Go**, depuis `main` (PR #1 et #2 fusionnées le
+   2026-11-08) : `make image`, puis `sudo make deploy KEY=/dev/disk/by-id/usb-…`. Vérifier
+   « TRIM : essai réussi » dans la sortie (seul essai depuis un vrai terminal). Au passage, supprimer la
+   branche distante devenue inutile : `git push origin --delete outil-alpha`.
 2. **Étiqueter la version** sur `main` une fois tout vert : dater la section 0.1.0-alpha de
    `CHANGELOG.md`, puis `git tag -a v0.1.0-alpha -m "zorin-nomade 0.1.0-alpha" && git push --tags`
    (ou demande-le à Claude).

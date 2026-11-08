@@ -198,9 +198,19 @@ ou dossier » (`2>/dev/null` placé après `<"$logf"` ne couvre pas l'erreur de 
 de repli `0` est juste. `git fetch` en SSH refusé par l'agent (clé non déverrouillée) ; les branches
 locales correspondaient déjà aux têtes des PR (vérifié avec `gh`).
 
-## 2026-11-08 15:50 — outil utilisable par simple clonage (D-045)
+## 2026-11-08 15:32 — outil utilisable par simple clonage (D-045)
 `host-doctor.sh` : garde-fous Claude (sudo sans mot de passe, groupes équivalents à root) en
 avertissements, bloquants avec `--strict` (`make doctor STRICT=1`) ; vérifié sur l'hôte : code 0 sans
 `STRICT`, échec avec (groupe `docker`). `config/local.env.example` ; README : clonage HTTPS, variante
 `--branch`, étape `local.env`. `deploy-test.sh:74` : comptage des lignes du journal sans l'erreur
 cosmétique du premier passage. Feu vert de Fabien pour fusionner les PR #1 et #2 après la CI.
+
+## 2026-11-08 15:55 — PR #1 et #2 fusionnées ; feuille de route 0.2 revue
+PR #1 fusionnée (`ddf6458`). Incident : `gh pr merge 1 --delete-branch` a supprimé `correctifs-cle`,
+base de la PR #2, que GitHub a **fermée** au lieu de la rebaser sur `main`. Réparé : branche recréée
+sur son ancien commit (`f9fa568`), PR #2 rouverte, base passée à `main`, branche supprimée de nouveau ;
+CI verte, PR #2 fusionnée (`571a199`). Leçon : pour des PR empilées, changer la base de la PR
+dépendante (`gh pr edit --base main`) **avant** de supprimer la branche de la première. La branche
+distante `outil-alpha` reste à supprimer (refusée par le mode automatique de Claude Code).
+Avec Fabien : 0.2 « retours du terrain » (`NOMADE-DATA` par défaut à 10 %, `nomade-diag`, rapport
+comparatif, GNOME Logiciels) ; `nomade-update` et le redéploiement sans perte repoussés en 0.3.
