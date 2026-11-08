@@ -191,6 +191,7 @@ check E-04 "dépôts Zorin conservés" test -s /etc/apt/sources.list.d/zorin.lis
 check E-04 "manifeste des paquets livré" test -s /etc/nomade/packages.manifest
 check E-08 "/etc/nomade/expected.env" test -s /etc/nomade/expected.env
 check E-08 "/etc/nomade/build-info" grep -q '^GIT_COMMIT=' /etc/nomade/build-info
+check E-08 "version de l'outil dans build-info" grep -Eq '^NOMADE_VERSION=[0-9]+\.[0-9]+\.[0-9]+' /etc/nomade/build-info
 check E-02 "aucun utilisateur live" no_live_user
 check E-02 "pas de montage casper" bash -c '! grep -qs casper /proc/cmdline'
 

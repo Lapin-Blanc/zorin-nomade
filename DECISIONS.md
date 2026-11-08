@@ -339,3 +339,35 @@ l'image n'est pas publiée, parce qu'il n'y en a pas besoin. Elle se construit s
 10 à 20 min depuis l'ISO en cache) et `deploy.sh` la lit dans `out/latest.img`. La CI ne garde que les
 diagnostics (D-023). Une publication (zstd, découpage sous 2 Gio, release GitHub) reste possible plus
 tard si un besoin apparaît, sans obstacle de principe.
+
+## D-044 — Le dépôt devient l'outil (0.1.0-alpha)
+2026-11-08 · retenue (Fabien)
+Après le premier déploiement réel, la clé sert au quotidien : le dépôt doit se lire comme un outil
+utilisable, pas comme le cahier des charges de sa construction par Claude. Retenu :
+- `README.md` = mode d'emploi (construire, tester, déployer, entretenir, dépanner, limites) ; checklist
+  du premier démarrage dans `docs/premier-demarrage.md` (repris du rapport du run, complété) ;
+- traces du chantier dans `docs/developpement/` (`git mv`, historique conservé) : guide de
+  développement, `prompts/`, rapport du run autonome, plan des phases 0 à 5 ; `PLAN.md` devient une
+  feuille de route par version ; `CLAUDE.md` passe de « tu construis » à « tu maintiens et fais évoluer » ;
+- versions `MAJEUR.MINEUR.CORRECTIF[-alpha|-beta]` : `PROJECT_VERSION` dans `config/project.env` (seul
+  `scripts/` et `config/` partent dans la VM de build), `CHANGELOG.md`, `NOMADE_VERSION` dans
+  `build-info` (contrôle E-08), `DEPLOY_VERSION` dans `deploy-info`, étiquette git `v<version>` posée sur
+  `main` par Fabien ou à sa demande, après `make deploy-test`.
+Restent à la racine les fichiers que Claude Code et les consignes citent en permanence (`CLAUDE.md`,
+`SPEC.md`, `DECISIONS.md`, `PLAN.md`) ; `docs/JOURNAL.md`, `docs/iso-notes.md` et
+`docs/A-FAIRE-FABIEN.md` gardent leur chemin. Prochaine étape : entretien d'une clé déployée (0.2).
+
+## D-045 — Outil utilisable par simple clonage : `make doctor` et `config/local.env`
+2026-11-08 · retenue (Fabien)
+Cas d'usage visé : sur une machine Debian ou Ubuntu, cloner le dépôt, y entrer, construire et
+déployer. Trois obstacles relevés, levés avant l'étiquette 0.1.0-alpha :
+- `make doctor` échouait (« points bloquants ») pour un compte membre de `docker` ou avec sudo sans mot
+  de passe, alors que ces contrôles ne protègent que le travail avec Claude Code. Retenu : ce sont des
+  avertissements `[!!]` ; `make doctor STRICT=1` (`host-doctor.sh --strict`) les rend bloquants, et
+  `CLAUDE.md` le cite sous cette forme. Être root reste bloquant dans tous les cas.
+- Les réglages par défaut sont ceux de Fabien. Retenu : `config/local.env.example` (commenté, sans
+  secret), copié en `config/local.env` ; étape ajoutée au démarrage rapide.
+- Clonage en HTTPS dans le README (dépôt public, aucune clé SSH nécessaire), avec la variante
+  `--branch v<version>` pour une version figée.
+Écarté pour l'instant : une interface graphique (`PLAN.md`, « plus tard ») ; elle s'appuiera sur ces
+deux points. Debian reste à essayer (le README annonce la famille Ubuntu 24.04).

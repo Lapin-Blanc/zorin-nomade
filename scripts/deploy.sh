@@ -323,6 +323,7 @@ grep -q '@' "$rule" && die "modèle udev incomplètement rempli"
 cat >"$MNT/etc/nomade/deploy-info" <<EOF
 # zorin-nomade (SPEC E-33) — écrit au déploiement
 DEPLOY_DATE=$(date -Iseconds)
+DEPLOY_VERSION=$PROJECT_VERSION
 DEPLOY_IMAGE=$(basename "$IMAGE")
 DEPLOY_ENCRYPT=$DEPLOY_ENCRYPT
 DEPLOY_USB_ID=$VIDPID
@@ -373,7 +374,7 @@ log "Déploiement terminé en $(((SECONDS - T0) / 60)) min $(((SECONDS - T0) % 6
 cat >&2 <<EOF
 
   ────────────────────────────────────────────────────────────────────────────────────────────
-  Clé prête. Premier démarrage natif (détail dans docs/RAPPORT.md) :
+  Clé prête. Premier démarrage natif (détail dans docs/premier-demarrage.md) :
    1. Débrancher la clé proprement, la brancher sur un port USB 3, menu de démarrage du PC
       (F12/F9/Échap…), choisir l'entrée USB/UEFI de la clé.
    2. Menu GRUB 3 s, puis phrase de passe LUKS (clavier belge)$( [[ "$DEPLOY_ENCRYPT" == 1 ]] || echo ' — sans objet ici' ).

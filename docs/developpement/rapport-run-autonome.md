@@ -1,5 +1,8 @@
 # Rapport du run autonome (phases 2 à 5)
 
+> Document historique (ancien `docs/RAPPORT.md`), gardé tel quel. La checklist du § 7 vit désormais
+> dans `docs/premier-demarrage.md`, les limites connues dans `README.md`, le suivi dans `PLAN.md`.
+
 Rédigé le 2026-11-08 pour Fabien. Le détail chronologique est dans `docs/JOURNAL.md`, les choix
 dans `DECISIONS.md` (D-013 à D-038), les constats sur l'ISO dans `docs/iso-notes.md`.
 
