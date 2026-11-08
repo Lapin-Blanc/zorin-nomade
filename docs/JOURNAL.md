@@ -198,9 +198,43 @@ ou dossier » (`2>/dev/null` placé après `<"$logf"` ne couvre pas l'erreur de 
 de repli `0` est juste. `git fetch` en SSH refusé par l'agent (clé non déverrouillée) ; les branches
 locales correspondaient déjà aux têtes des PR (vérifié avec `gh`).
 
-## 2026-11-08 15:50 — outil utilisable par simple clonage (D-045)
+## 2026-11-08 15:32 — outil utilisable par simple clonage (D-045)
 `host-doctor.sh` : garde-fous Claude (sudo sans mot de passe, groupes équivalents à root) en
 avertissements, bloquants avec `--strict` (`make doctor STRICT=1`) ; vérifié sur l'hôte : code 0 sans
 `STRICT`, échec avec (groupe `docker`). `config/local.env.example` ; README : clonage HTTPS, variante
 `--branch`, étape `local.env`. `deploy-test.sh:74` : comptage des lignes du journal sans l'erreur
 cosmétique du premier passage. Feu vert de Fabien pour fusionner les PR #1 et #2 après la CI.
+
+## 2026-11-08 15:55 — PR #1 et #2 fusionnées ; feuille de route 0.2 revue
+PR #1 fusionnée (`ddf6458`). Incident : `gh pr merge 1 --delete-branch` a supprimé `correctifs-cle`,
+base de la PR #2, que GitHub a **fermée** au lieu de la rebaser sur `main`. Réparé : branche recréée
+sur son ancien commit (`f9fa568`), PR #2 rouverte, base passée à `main`, branche supprimée de nouveau ;
+CI verte, PR #2 fusionnée (`571a199`). Leçon : pour des PR empilées, changer la base de la PR
+dépendante (`gh pr edit --base main`) **avant** de supprimer la branche de la première. La branche
+distante `outil-alpha` reste à supprimer (refusée par le mode automatique de Claude Code).
+Avec Fabien : 0.2 « retours du terrain » (`NOMADE-DATA` par défaut à 10 %, `nomade-diag`, rapport
+comparatif, GNOME Logiciels) ; `nomade-update` et le redéploiement sans perte au second plan, sans
+version prévue : les tests grandeur nature décideront des versions suivantes.
+
+## 2026-11-08 17:00 — premier déploiement réel sur une clé SSK de 128 Go
+Par Fabien depuis `main`, image `zorin-nomade-20261108-1555` (reconstruite par lui, mêmes scripts de
+construction que l'image validée), sortie gardée par `tee`. Clé SSK « Portable SSD 128GB » : pont VIA
+Labs `2109:0715` (« VL817 SATA Adaptor » pour `lsusb`, mais le VL817 est un concentrateur : probablement
+un VL715), SSD SATA, 10 Gbit/s négociés. Le noyau ignore UAS pour ce pont (quirk intégré,
+`usb-storage`) ; `rotational=1` vu par le noyau, corrigé par la règle udev. Essai de TRIM : `blkdiscard
+-f` atteint le périphérique, refusé par le pont (« Illegal Request », EIO) → `DEPLOY_DISCARD=0`, règle
+sans `provisioning_mode` ; la cause réelle s'affiche (correctif de la PR #1). Écriture `bmaptool`
+225 Mio/s (560 sur la clé de 1 To), déploiement en 3 min 57 s, contrôles finaux sains. Démarrage et
+contrôles du premier démarrage conformes (Fabien). Le port (USB-A ou USB-C) n'aurait rien changé :
+UAS, TRIM et vitesse maximale dépendent du pont. Correctif : `deploy.sh` relève le pilote USB
+(`DEPLOY_USB_DRIVER`) et adapte le récapitulatif, qui annonçait toujours `uas` ; `make deploy-test` vert
+(124 contrôles, Secure Boot activé et désactivé).
+
+## 2026-11-08 17:25 — table des ponts du projet Fabrique-Clé (`reference/debian`)
+Lu à la demande de Fabien : l'onglet Diagnostic de l'application Rust (`app/src/diagnostic/`,
+`docs/architecture.md`) couvre déjà une bonne part de `nomade-diag` côté clé (pilote, liaison négociée,
+TRIM, file de commandes, rotatif déclaré, ordonnanceur ; lectures directes bornées en durée ; écriture
+sur l'espace libre par fichier délié, sans effacer ; fiches lu/mesuré/déduit/non mesuré). Sa table
+`fabricants-usb.txt` corrige deux erreurs de la journée : `090c:2320` est un Silicon Motion SM2320
+(contrôleur de SSD USB natif, pas un SSD NVMe derrière un pont), `2109:0715` probablement un VL715
+(le nom `lsusb` « VL817 » désigne un concentrateur). Corrigé dans README, PLAN, CHANGELOG, A-FAIRE.

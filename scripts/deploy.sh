@@ -151,6 +151,7 @@ fi
 
 # --------------------------------------------------------------------------------------------
 step "Pont USB et essai de TRIM (E-32)"
+USB_DRIVER=""
 if [[ -n "$USB_ID" ]]; then
   VIDPID="$USB_ID"
 else
@@ -159,9 +160,14 @@ else
   while [[ "$d" != / && ! -f "$d/idVendor" ]]; do d="$(dirname "$d")"; done
   [[ -f "$d/idVendor" ]] || die "pont USB introuvable dans sysfs pour $DEV"
   VIDPID="$(cat "$d/idVendor"):$(cat "$d/idProduct")"
+  # Pilote choisi par le noyau (uas, ou usb-storage si UAS est ignoré pour ce pont) ; le même sur
+  # tout PC, puisqu'il dépend de l'identifiant du pont et pas du port
+  for i in "$d"/*:*/driver; do
+    if [[ -e "$i" ]]; then USB_DRIVER="$(basename "$(readlink -f "$i")")"; break; fi
+  done
 fi
 [[ "$VIDPID" =~ ^[0-9a-f]{4}:[0-9a-f]{4}$ ]] || die "VID:PID invalide : $VIDPID"
-log "pont USB : $VIDPID"
+log "pont USB : $VIDPID, pilote : ${USB_DRIVER:-inconnu}"
 
 # Le pont annonce-t-il le TRIM ? Sinon, on tente provisioning_mode=unmap le temps d'un essai.
 # L'essai porte sur le premier Mio du disque, effacé de toute façon juste après.
@@ -327,6 +333,7 @@ DEPLOY_VERSION=$PROJECT_VERSION
 DEPLOY_IMAGE=$(basename "$IMAGE")
 DEPLOY_ENCRYPT=$DEPLOY_ENCRYPT
 DEPLOY_USB_ID=$VIDPID
+DEPLOY_USB_DRIVER=${USB_DRIVER:-inconnu}
 DEPLOY_DISCARD=$DISCARD_OK
 DEPLOY_DATA_GIB=$DEPLOY_DATA_GIB
 DEPLOY_INODE_RATIO=$DEPLOY_INODE_RATIO
@@ -379,8 +386,9 @@ cat >&2 <<EOF
       (F12/F9/Échap…), choisir l'entrée USB/UEFI de la clé.
    2. Menu GRUB 3 s, puis phrase de passe LUKS (clavier belge)$( [[ "$DEPLOY_ENCRYPT" == 1 ]] || echo ' — sans objet ici' ).
    3. Connexion en « $TARGET_USER » avec le mot de passe choisi ; Wi-Fi, son, écran.
-   4. Contrôles : lsusb -t (uas), lsblk --discard, sudo fstrim -v /, swapon, psd p,
-      journalctl -k | grep -i uas_eh, cat /etc/nomade/deploy-info.
+   4. Contrôles : lsusb -t (attendu : ${USB_DRIVER:-uas ou usb-storage}), lsblk --discard ($( ((DISCARD_OK)) && echo 'valeurs non nulles' || echo 'zéros : pas de TRIM par ce pont' )),
+      sudo fstrim -v /, swapon, psd p, cat /sys/block/sdX/queue/rotational (0),
+      journalctl -k | grep -iE 'uas_eh|reset', cat /etc/nomade/deploy-info.
    5. Essayer un PC avec Secure Boot actif et un PC sans.
   ────────────────────────────────────────────────────────────────────────────────────────────
 EOF

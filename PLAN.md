@@ -34,7 +34,7 @@ lint par shellcheck seul, puis CI GitHub.
 - [x] Sur l'hôte : `make deploy-test RUNS=2` (absent de la CI) sur `outil-alpha` : « TRIM : essai
       réussi » aux deux passages, E-30 « racine recréée à 65536 octets par inode », 124 contrôles,
       `RESULT=PASS` Secure Boot activé et désactivé.
-- [ ] Fusionner la PR #1.
+- [x] PR #1 fusionnée (`ddf6458`).
 
 ### Le dépôt devient l'outil (D-044, branche `outil-alpha`)
 
@@ -49,17 +49,43 @@ lint par shellcheck seul, puis CI GitHub.
 - [x] Utilisable par simple clonage (D-045) : `make doctor` sans faux échec (garde-fous Claude en
       avertissements, `STRICT=1`), `config/local.env.example`, clonage HTTPS dans le README.
 - [x] CI verte sur la PR #2 (`lint`, `image`).
-- [ ] Déploiement réel par Fabien sur une clé SSK de 128 Go (seul essai de l'essai de TRIM depuis un
-      vrai terminal), avant l'étiquette.
-- [ ] Fusion de la PR #2 après la PR #1.
-- [ ] **Acceptation** : PR #1 et PR « outil » fusionnées, `make deploy-test` vert sur l'hôte ; Fabien pose
-      l'étiquette `v0.1.0-alpha` sur `main` (`git tag -a v0.1.0-alpha -m … && git push --tags`) et date
-      la version dans `CHANGELOG.md`.
+- [x] Déploiement réel par Fabien sur une clé SSK de 128 Go (2026-11-08) : déploiement en 3 min 57 s,
+      démarrage et contrôles conformes. Pont VIA Labs `2109:0715` sans UAS ni TRIM : l'essai de TRIM est allé
+      jusqu'au périphérique (`-f` efficace, vraie cause affichée), mais sa réussite depuis un vrai
+      terminal reste à voir sur un pont qui accepte le TRIM.
+- [x] `deploy.sh` : pilote USB détecté (`DEPLOY_USB_DRIVER` dans `deploy-info`), récapitulatif final
+      adapté (pilote attendu, TRIM ou non, `rotational`).
+- [x] PR #2 fusionnée après la PR #1 (`571a199`).
+- [x] **Acceptation** : PR #1 et PR « outil » fusionnées, `make deploy-test` vert sur l'hôte ; étiquette
+      `v0.1.0-alpha` posée sur `main` à la demande de Fabien (2026-11-08), version datée dans
+      `CHANGELOG.md`. Réserve : « TRIM : essai réussi » depuis un vrai terminal reste à voir sur un pont
+      qui accepte le TRIM.
 
-## 0.2 — entretenir une clé déployée
+## 0.2 — retours du terrain
 
-Objectif : faire évoluer une clé en service sans la réécrire, et ne plus rien perdre quand un
-redéploiement est nécessaire.
+Objectif : déployer sur des clés et des PC variés (clés SSK de 128 Go reformatables) et en tirer des
+données comparables. Les tests grandeur nature qui suivront définiront les versions suivantes.
+
+- [ ] Partition exFAT `NOMADE-DATA` active par défaut, à 10 % de la clé (`DEPLOY_DATA_PCT`, plancher
+      à fixer, `DEPLOY_DATA_GIB` en surcharge, 0 : aucune) ; accessible depuis la clé sans mot de passe
+      administrateur (`fstab` ou règle udisks, à vérifier) ; autotest et `make deploy-test`. Décision à
+      consigner. Sans effet sur la clé de 1 To (pas de redéploiement).
+- [ ] `nomade-diag` sur la clé (note de conception d'abord, en partant de l'onglet Diagnostic de
+      Fabrique-Clé : `reference/debian/app/src/diagnostic/`, table `fabricants-usb.txt`) : versions et autotest, machine hôte
+      (modèle, firmware, Secure Boot, « Microsoft UEFI CA » dans db, GPU), clé et pont USB (UAS, vitesse,
+      TRIM, réinitialisations), temps de démarrage, mémoire et écritures, erreurs ; mesures de
+      performance en option et plafonnées. Anonymisé par défaut (numéros de série remplacés par une
+      empreinte, ni MAC, ni IP, ni réseaux, ni noms). Archive `nomade-diag-<date>-<modèle>.tar.zst`
+      avec `resume.json` stable, écrite sur `NOMADE-DATA` si elle existe.
+- [ ] Côté hôte : `make diag-rapport` rassemble les `resume.json` (dossier `diagnostics/`, à décider :
+      versionné ou non) en un tableau comparatif `docs/terrain.md`.
+- [ ] Image : GNOME Logiciels sans service résident, sans écraser `/etc/xdg/autostart` du squashfs
+      (méthode à choisir et à consigner).
+
+## Entretenir une clé déployée (sans version prévue)
+
+Au second plan : les tests grandeur nature (0.2 et suivantes) feront encore évoluer la base et
+décideront des prochaines versions. À reprendre quand elle se sera stabilisée.
 
 - [ ] Concevoir `nomade-update` (sur la clé) : appliquer les changements de `config/rootfs/` et des
       réglages du build (unités masquées ou désactivées, dconf, sysctl…) à un système déployé, de façon
@@ -67,8 +93,6 @@ redéploiement est nécessaire.
       version ; décision à consigner.
 - [ ] Redéploiement sans perte : au minimum sauvegarde et restauration de `/home` outillées et
       documentées ; au mieux, partition `/home` préservée (évolution de E-34, décision à prendre).
-- [ ] Image : GNOME Logiciels sans service résident, sans écraser `/etc/xdg/autostart` du squashfs
-      (méthode à choisir et à consigner).
 
 ## Plus tard
 
