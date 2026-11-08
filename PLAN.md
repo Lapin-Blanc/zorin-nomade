@@ -66,6 +66,10 @@ lint par shellcheck seul, puis CI GitHub.
 Objectif : déployer sur des clés et des PC variés (clés SSK de 128 Go reformatables) et en tirer des
 données comparables. Les tests grandeur nature qui suivront définiront les versions suivantes.
 
+- [x] Version ouverte sur la branche `retours-terrain` : `PROJECT_VERSION=0.2.0-alpha`, section
+      « Non publié » de `CHANGELOG.md`.
+- [ ] Note de conception `docs/developpement/conception-0.2.md` (`NOMADE-DATA`, `nomade-diag`,
+      `make diag-rapport`) **validée par Fabien** ; aucun code avant.
 - [ ] Partition exFAT `NOMADE-DATA` active par défaut, à 10 % de la clé (`DEPLOY_DATA_PCT`, plancher
       à fixer, `DEPLOY_DATA_GIB` en surcharge, 0 : aucune) ; accessible depuis la clé sans mot de passe
       administrateur (`fstab` ou règle udisks, à vérifier) ; autotest et `make deploy-test`. Décision à

@@ -6,7 +6,7 @@ Changements visibles de zorin-nomade, par version. Numérotation `MAJEUR.MINEUR.
 
 ## Non publié
 
-(rien pour l'instant)
+- Version de l'outil passée à 0.2.0-alpha (en cours).
 
 ## 0.1.0-alpha — 2026-11-08
 

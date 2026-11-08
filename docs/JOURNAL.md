@@ -238,3 +238,14 @@ sur l'espace libre par fichier délié, sans effacer ; fiches lu/mesuré/déduit
 `fabricants-usb.txt` corrige deux erreurs de la journée : `090c:2320` est un Silicon Motion SM2320
 (contrôleur de SSD USB natif, pas un SSD NVMe derrière un pont), `2109:0715` probablement un VL715
 (le nom `lsusb` « VL817 » désigne un concentrateur). Corrigé dans README, PLAN, CHANGELOG, A-FAIRE.
+
+## 2026-11-08 18:00 — ouverture de la 0.2 et note de conception (branche `retours-terrain`)
+`PROJECT_VERSION=0.2.0-alpha`, « Non publié » dans `CHANGELOG.md` ; `docs/A-FAIRE-FABIEN.md` sans
+l'étiquette (posée) ni la branche distante `outil-alpha` (déjà absente de GitHub, vérifié par
+`git ls-remote`). Note `docs/developpement/conception-0.2.md` soumise à Fabien : `NOMADE-DATA` à 10 %
+(plancher 8 Gio) montée par `fstab` (UUID, `uid=1000`, `nofail`) et `exfatprogs` dans l'image ;
+`nomade-diag` réécrit en Python (bibliothèque standard) en reprenant de Fabrique-Clé la table des
+puces, le parcours sysfs et le protocole de mesure, pas le code Rust (lié à `disques`, `suivi`,
+`assistant` ; Rust ≥ 1.85 absent de Noble ; pas de `cargo` sur la clé) ; anonymisation sur liste
+blanche avec empreintes salées par clé ; `make diag-rapport` vers `docs/terrain.md`. Constats : l'image
+a `python3`, `jq`, `zstd`, `mokutil`, `dmidecode`, `mesa-utils`, mais ni `exfatprogs` ni `fio`.
