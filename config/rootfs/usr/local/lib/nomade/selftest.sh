@@ -117,12 +117,12 @@ root_is_crypt() { [[ "$(lsblk -ndo TYPE "$ROOT_SRC" 2>/dev/null)" == crypt ]]; }
 luks_is_v2() { cryptsetup luksDump "$ROOT_PART" 2>/dev/null | grep -Eq '^Version:[[:space:]]+2$'; }
 luks_flags() {
   local f
-  f="$(cryptsetup luksDump "$ROOT_PART" 2>/dev/null | awk -F: '/^Flags:/ { print $2 }')"
+  f="$(cryptsetup luksDump "$ROOT_PART" 2>/dev/null | awk -F: '/^Flags:/ { gsub(/[[:space:]]+/, " ", $2); print $2 }')"
   [[ " $f " == *" allow-discards "* && " $f " == *" no-read-workqueue "* && " $f " == *" no-write-workqueue "* ]]
 }
 dm_flags() {
   local f
-  f="$(cryptsetup status "$ROOT_SRC" 2>/dev/null | awk -F: '/^ *flags:/ { print $2 }')"
+  f="$(cryptsetup status "$ROOT_SRC" 2>/dev/null | awk -F: '/^ *flags:/ { gsub(/[[:space:]]+/, " ", $2); print $2 }')"
   [[ " $f " == *" discards "* && " $f " == *" no_read_workqueue "* && " $f " == *" no_write_workqueue "* ]]
 }
 boot_plain() { [[ "$(lsblk -ndo TYPE "$(findmnt -no SOURCE /boot)" 2>/dev/null)" == part ]]; }

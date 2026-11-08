@@ -44,9 +44,9 @@ test: ## Démarre out/latest.img dans QEMU (Secure Boot on puis off) et lit l'au
 test-gui: ## Démarre out/latest.img dans une fenêtre, pour regarder
 	@$(S)/test-image.sh --gui
 
-deploy-test: builder ## Déploiement chiffré complet sur un fichier, puis test de démarrage
+deploy-test: builder ## Déploiement chiffré sur un fichier puis démarrage (RUNS=2 : rejoué deux fois)
 	$(call need,deploy-test.sh)
-	@$(S)/deploy-test.sh
+	@$(S)/deploy-test.sh $(if $(RUNS),--runs $(RUNS))
 
 deploy: ## (Fabien, avec sudo) sudo make deploy KEY=/dev/disk/by-id/usb-…
 	@[[ $$EUID -eq 0 ]] || { echo "À lancer par Fabien : sudo make deploy KEY=/dev/disk/by-id/usb-…"; exit 1; }

@@ -98,24 +98,24 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
 
 ## Phase 3 — Déploiement
 
-- [ ] `scripts/deploy.sh` selon E-28 à E-34 (garde-fous de `lib.sh` obligatoires) : secrets saisis
+- [x] `scripts/deploy.sh` selon E-28 à E-34 (garde-fous de `lib.sh` obligatoires) : secrets saisis
       d'abord, VID:PID du pont, essai de TRIM (D-036), effacement, `bmaptool copy`, `sgdisk -e`,
       agrandissement de p3 (moins `DEPLOY_DATA_GIB`), partition exFAT optionnelle ; si chiffrement :
       **recréation** (D-035, au lieu du chiffrement en place) — `blkdiscard` de p3, `luksFormat`
       LUKS2, ouverture `--persistent --perf-no_read_workqueue --perf-no_write_workqueue
       --allow-discards`, `mkfs.ext4` au même UUID, `rsync -aHAXS` depuis la racine de l'image ;
       sinon `resize2fs`.
-- [ ] Chroot de la cible : `crypttab` (`luks,discard,initramfs`), `fstab` inchangé (même UUID,
+- [x] Chroot de la cible : `crypttab` (`luks,discard,initramfs`), `fstab` inchangé (même UUID,
       D-035), `KEYMAP=y` déjà dans l'image (D-034), `update-initramfs`, `update-grub`, mot de passe de
       l'utilisateur (`chpasswd`), règle udev depuis le modèle (VID:PID détecté ; essai de discard
       pour `provisioning_mode=unmap`), contrôles finaux (fsck, chemin amovible), checklist affichée.
-- [ ] `scripts/deploy-test.sh` (E-37) : dans la VM, fichier creux de `DEPLOY_TEST_SIZE_GIB`,
+- [x] `scripts/deploy-test.sh` (E-37) : dans la VM, fichier creux de `DEPLOY_TEST_SIZE_GIB`,
       `DEPLOY_TEST=1`, VID:PID imposé à celui du `usb-storage` de QEMU (`46f4:0001`), phrase et mot
       de passe de test générés à l'exécution (jamais écrits dans la cible) ; rapatriement.
-- [ ] `scripts/test-image.sh --encrypted` : saisie de la phrase au clavier virtuel (QMP `send-key`)
+- [x] `scripts/test-image.sh --encrypted` : saisie de la phrase au clavier virtuel (QMP `send-key`)
       quand la question est visible à l'écran (disque inactif, D-037) ; touches d'un AZERTY (D-034) ; phrase composée de lettres identiques en AZERTY et
       QWERTY, plus un contrôle que l'initramfs embarque la disposition `be`.
-- [ ] **Acceptation** : `make deploy-test` → `RESULT=PASS`, racine sur `dm-crypt`,
+- [x] **Acceptation** : `make deploy-test` → `RESULT=PASS`, racine sur `dm-crypt`,
       `crypttab` avec `discard`, drapeaux de performance LUKS persistants, utilisateur
       déverrouillé, règle udev générée (VID:PID du test).
 

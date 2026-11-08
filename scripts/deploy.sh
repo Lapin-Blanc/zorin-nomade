@@ -235,7 +235,7 @@ if [[ "$DEPLOY_ENCRYPT" == 1 ]]; then
   OPENED="$MAPPER"
   LUKS_UUID="$(cryptsetup luksUUID "$P3")"
   dump="$(cryptsetup luksDump "$P3")"
-  flags="$(awk -F: '/^Flags:/ { print $2 }' <<<"$dump")"
+  flags="$(awk -F: '/^Flags:/ { gsub(/[[:space:]]+/, " ", $2); print $2 }' <<<"$dump")"
   for f in allow-discards no-read-workqueue no-write-workqueue; do
     [[ " $flags " == *" $f "* ]] || die "drapeau LUKS persistant absent : $f (Flags :$flags)"
   done

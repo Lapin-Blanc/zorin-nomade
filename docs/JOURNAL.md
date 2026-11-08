@@ -81,3 +81,22 @@ contrôle sur `cached_UTF-8_del.kmap.gz` (D-034). `whoopsie.service` est « stat
 Build en 10 min, image 6,8 Gio alloués. `make test` : `RESULT=PASS` avec Secure Boot activé et
 désactivé, 103 contrôles chacun, journal `-p err` vide, écran de connexion GNOME (en français).
 Phase 2 terminée. Les contrôles « clé déployée » sont en place pour la phase 3.
+
+## 2026-11-08 10:10 — phase 3 / déploiement
+`scripts/deploy.sh` (recréation LUKS2 + rsync, D-035 ; détails D-036), `scripts/deploy-test.sh`,
+`test-image.sh --encrypted` (question détectée par l'inactivité du disque, D-037). 1er essai : faux
+échec sur les drapeaux LUKS (tabulation dans la sortie de `luksDump`) → blancs normalisés. 2e essai
+(image de la phase 2) : déploiement en 2 min 44 s dans la VM, fichier rapatrié 7,9 Gio alloués / 64 ;
+question LUKS détectée à ≈ 22 s, phrase tapée en touches AZERTY (`a`→`q`, `z`→`w`, `m`→`;`) et
+acceptée en 3 s : disposition `be` prouvée dans l'initramfs ; 117 PASS, seule la ligne des drapeaux
+échouait (même bug d'analyse, dans l'autotest embarqué) → reconstruction de l'image et essai final
+avec deux déploiements successifs (E-34).
+
+## 2026-11-08 10:35 — phase 3 / acceptation
+Image reconstruite (autotest corrigé), puis `make deploy-test RUNS=2` : deux déploiements successifs
+sur le même fichier de 64 Gio (2 min 53 s et 3 min 26 s ; deux volumes LUKS2 d'UUID différents :
+clé de volume tirée à chaque fois ; TRIM accepté → règle `unmap`), fichier rapatrié 7,9 Gio alloués.
+Démarrage : question détectée à 24 s, phrase acceptée en 3 s (touches AZERTY), `RESULT=PASS` avec
+Secure Boot activé et désactivé, 118 contrôles (racine dm-crypt, drapeaux LUKS persistants,
+`discard`, règle udev appliquée, racine agrandie, compte déverrouillé). Aucun secret dans les
+journaux (contrôlé par `deploy-test.sh`). Phase 3 terminée.

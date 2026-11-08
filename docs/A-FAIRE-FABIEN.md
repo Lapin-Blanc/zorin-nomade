@@ -18,13 +18,29 @@ Tenu à jour par Claude. Rien ici ne bloque le run autonome sauf mention contrai
 - **Mémoire** : 7 Gio de RAM. La VM de build et les VM de test ont été ramenées à 3 Gio (D-016).
   Pendant `make all`, fermer quelques onglets de Brave ou fenêtres de VS Code aide.
 
-## Avant ou pendant le run autonome
+## Activer la CI GitHub (phase 4, D-023) — quand tu veux
 
-- [ ] **Dépôt GitHub pour la CI (phase 4, D-023)** : crée le dépôt (public de préférence : minutes
-      Actions gratuites et artefacts sans quota), puis
-      `git remote add origin git@github.com:Lapin-Blanc/zorin-nomade.git && git push -u origin main`.
-      Claude ne pousse pas de lui-même. Si tu veux qu'il pousse et vérifie la CI pendant le run,
-      dis-le dans le texte de lancement (`prompts/run.md`).
+Rien n'a été poussé. Les workflows sont prêts (`.github/workflows/lint.yml` et `image.yml`) et
+`make ci` passe en local.
+
+1. Crée le dépôt sur GitHub **sans** README ni licence (public de préférence : minutes Actions
+   gratuites et illimitées sur les runners standard, artefacts sans quota gênant).
+2. Pousse :
+   ```bash
+   git remote add origin git@github.com:Lapin-Blanc/zorin-nomade.git
+   git push -u origin main
+   ```
+   Vérifie avant que `.claude/settings copy.json` est bien supprimé ou gardé comme tu le veux
+   (sa suppression était en attente dans l'arbre de travail, non committée par Claude).
+3. Le push lance `lint` (≈ 1 min) et `image` (≈ 30–40 min la première fois : ISO de 3,9 Go
+   téléchargée puis mise en cache, construction, deux démarrages QEMU).
+4. Onglet *Actions* → *image* : vérifie que le job est vert ; l'artefact `diagnostic` contient les
+   journaux, `serial.log` et `screen.png` de chaque essai. Pour relancer à la main :
+   *Run workflow*.
+5. Si le job `image` échoue sur l'accès à KVM (rare sur les runners `ubuntu-24.04`), le
+   message s'affiche à l'étape « Accès à KVM » : signale-le à Claude.
+
+Aucun secret n'est nécessaire (ni jeton, ni clé) : la CI ne déploie rien.
 
 ## Après le run
 

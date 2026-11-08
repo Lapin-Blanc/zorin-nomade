@@ -285,3 +285,14 @@ essais au plus. La phrase passe par l'environnement, jamais en argument de comma
 Méthode documentée par Ubuntu : `/usr/share/systemd/tmp.mount` copié dans `/etc/systemd/system/`
 puis activé (le build échoue si le fichier existait déjà). Une mise à jour de systemd ne modifiera pas
 la copie ; l'unité est stable depuis des années (`size=50%`, `nr_inodes=1m`).
+
+## D-039 — Pas de publication de l'image (release) pour l'instant
+2026-11-08 · retenue (Fabien)
+Contrairement au projet Debian, l'image n'est pas publiée dans une release GitHub ; D-023 est maintenu
+(CI = construction + test, diagnostics seulement). L'argument de taille ne tient pas (zstd + découpage
+sous 2 Gio comme dans le projet Debian), mais l'image est un Zorin Core **modifié** qui garde la marque
+Zorin : la politique de marque (zorin.com/press, usage non commercial, sans affiliation suggérée, avec
+mention de la marque) est muette sur les versions modifiées, et une réponse de Zorin sur son forum (2021)
+demande d'en retirer logos et marque. L'usage reste personnel, et pour les élèves limité au cadre des cours :
+l'image se construit et se déploie en local. À reconsidérer (dépôt et releases privés, ou accord de Zorin)
+si une diffusion plus large devient utile.
