@@ -382,6 +382,17 @@ for u in smartd.service smartmontools.service NetworkManager-wait-online.service
   fi
 done
 
+# E-43 (D-042) : la clé n'écrit rien dans le firmware du PC hôte en dehors du démarrage :
+# secureboot-db.service (sbkeysync : db/dbx Ubuntu écrites dans la NVRAM à chaque démarrage) et
+# fwupd (mises à jour de firmware du PC proposées par Logiciels, métadonnées LVFS quotidiennes).
+NO_FIRMWARE_UNITS=(secureboot-db.service fwupd.service fwupd-refresh.timer)
+in_chroot systemctl disable "${NO_FIRMWARE_UNITS[@]}" 2>&1 | sed 's/^/  /' >&2 || true
+in_chroot systemctl mask "${NO_FIRMWARE_UNITS[@]}" 2>&1 | sed 's/^/  /' >&2
+for u in "${NO_FIRMWARE_UNITS[@]}"; do
+  [[ "$(in_chroot systemctl is-enabled "$u" 2>/dev/null || true)" == masked ]] || die "$u non masqué (E-43)"
+done
+log "masqués : ${NO_FIRMWARE_UNITS[*]}"
+
 # E-15 : paquets de langue complets. check-language-support compare l'installé aux paquets
 # disponibles ; tout ce qu'il propose après la purge est installé (normalement rien, D-030).
 mapfile -t LANG_PKGS < <(in_chroot check-language-support -l "${TARGET_LOCALE%%_*}" | tr ' ' '\n' | awk NF)

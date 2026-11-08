@@ -71,6 +71,7 @@ vm "sudo rm -rf /work/deploy-test && mkdir -p /work/deploy-test \
     && truncate -s ${DEPLOY_TEST_SIZE_GIB}G /work/deploy-test/stick.img"
 for ((i = 1; i <= runs; i++)); do
   log "Déploiement $i/$runs dans la VM — journal : ${logf#"$NOMADE_ROOT"/}"
+  n0="$(wc -l <"$logf" 2>/dev/null || echo 0)"
   if ! printf '%s\n%s\n' "$PASSPHRASE" "$PASSWORD" \
        | vm "sudo env DEPLOY_TEST=1 /work/repo/scripts/deploy.sh --target /work/deploy-test/stick.img \
                --image /work/img/$name.img --usb-id 46f4:0001 --secrets-stdin" >>"$logf" 2>&1; then
@@ -78,6 +79,10 @@ for ((i = 1; i <= runs; i++)); do
     die "échec du déploiement de test — journal : $logf"
   fi
   grep -aE '^\[[0-9:]+\] ===|TRIM|LUKS2|Déploiement terminé' "$logf" | tail -n 4 >&2
+  # Le fichier de test (loop) accepte le TRIM : l'essai doit réussir à chaque passage, y compris
+  # sur une cible qui porte déjà une table de partitions (2e passage).
+  tail -n "+$((n0 + 1))" "$logf" | grep -aq 'TRIM : essai réussi' \
+    || die "déploiement $i/$runs : l'essai de TRIM a échoué sur le fichier de test — journal : $logf"
 done
 # Le journal ne doit contenir aucun secret
 if grep -aqF -e "$PASSPHRASE" -e "$PASSWORD" "$logf"; then die "un secret de test apparaît dans $logf"; fi

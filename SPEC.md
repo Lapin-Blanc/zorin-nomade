@@ -58,6 +58,10 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   machine inconnue, il faut pouvoir choisir le mode de dépannage.
 - E-41 os-prober désactivé (`GRUB_DISABLE_OS_PROBER=true`) : le menu ne liste jamais les systèmes
   de la VM de build ni ceux du PC hôte, et `update-grub` ne sonde pas ses disques. (D-026)
+- E-43 Aucune écriture dans le firmware du PC hôte en dehors du démarrage lui-même :
+  `secureboot-db.service` (db/dbx d'Ubuntu écrites par `sbkeysync` dans la NVRAM),
+  `fwupd.service` et `fwupd-refresh.timer` (mises à jour de firmware du PC proposées par
+  Logiciels) sont masqués. (D-042)
 - E-12 initramfs générique : `MODULES=most`, modules `uas`, `usb_storage`, `xhci_pci` présents ;
   `RESUME=none` ; **pas d'hibernation**.
 - E-13 **Aucun pilote graphique propriétaire** (pas de `nvidia-driver-*`) ; Mesa/nouveau.
@@ -88,6 +92,8 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
 - E-25 `profile-sync-daemon` activé globalement pour les sessions utilisateur, avec une
   définition pour **Brave**, le navigateur de Zorin 18.1 (Zorin ne livre pas Firefox, et psd 6.50
   ne connaît pas Brave) : profil `~/.config/BraveSoftware/Brave-Browser` en RAM. (D-021)
+  `/run/user/<uid>`, où psd garde le profil, est plafonné à 25 % de la RAM
+  (`logind.conf.d`, `RuntimeDirectorySize`) au lieu de 10 %. (D-040)
 - E-26 GNOME : indexation de contenu (Tracker 3 / LocalSearch) **désactivée** sans casser la
   recherche par nom (noms de fichiers indexés, extraction du texte coupée : `max-bytes=0`) ;
   GNOME Logiciels ne télécharge pas les mises à jour en arrière-plan ;
@@ -113,6 +119,7 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   saisie par Fabien ; `discard` dans `crypttab` ; drapeaux persistants
   `--perf-no_read_workqueue --perf-no_write_workqueue --allow-discards` ; /boot reste en clair.
   La phrase de passe se tape en **clavier belge** dès l'initramfs (`KEYMAP=y`).
+  La racine recréée compte un inode pour `DEPLOY_INODE_RATIO` octets (64 Kio), pas 16 Kio. (D-041)
 - E-31 Mot de passe de `TARGET_USER` saisi au déploiement.
 - E-32 Détection du pont USB de la clé (VID:PID) et écriture dans la cible de
   `/etc/udev/rules.d/60-nomade-usb.rules` à partir de `config/templates/60-nomade-usb.rules.in` :
@@ -129,8 +136,8 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
   L'autotest embarqué (`nomade-selftest.service`) ne s'exécute que dans une VM signalée par
   `fw_cfg` (`opt/nomade/selftest`) et écrit ses résultats sur le port série
   (`NOMADE-SELFTEST: PASS|FAIL …`, puis `RESULT=PASS|FAIL`). Le harnais prend une capture d'écran.
-- E-36 L'autotest couvre au minimum les exigences E-02, E-07, E-09, E-10, E-12 à E-27 et
-  E-39 à E-41. Toute exigence vérifiable automatiquement doit y avoir une ligne.
+- E-36 L'autotest couvre au minimum les exigences E-02, E-07, E-09, E-10, E-12 à E-27,
+  E-39 à E-41 et E-43. Toute exigence vérifiable automatiquement doit y avoir une ligne.
 - E-37 `make deploy-test` : déploiement complet (chiffré) dans la VM de build vers un fichier
   creux de 64 Gio, puis démarrage de ce fichier dans QEMU sur l'hôte avec déverrouillage
   automatisé **propre au test** (aucune trace dans un système réellement déployé) : phrase tapée

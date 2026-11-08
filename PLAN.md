@@ -144,3 +144,31 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
       (`psd p`), recherche par nom, `journalctl -k | grep uas_eh` (pont SSK 090c:2320),
       démarrage sur un PC Secure Boot et un PC sans).
 - [x] Mettre à jour `README.md` si l'usage a changé.
+
+## Phase 6 — Retour d'expérience sur la clé déployée (2026-11-08)
+
+Clé déployée le 2026-11-08 (image `zorin-nomade-20261108-1009`), évaluée en usage réel sur le HP de
+Fabien (mesures et constats : `docs/JOURNAL.md`). Branche `correctifs-cle`, préparée **sur la clé**
+(sans `make`, QEMU ni OVMF : lint par shellcheck seul) ; à valider sur l'hôte avant fusion.
+
+- [x] Évaluation sur matériel réel : débits, latences, démarrage, mémoire, écritures, TRIM, services.
+- [x] `deploy.sh` : essai de TRIM avec `blkdiscard -f </dev/null` et cause consignée (l'essai échouait
+      sur toute clé déjà partitionnée quand stdin est un terminal) ; `deploy-test.sh` exige que l'essai
+      réussisse à chaque passage.
+- [x] D-041 : racine recréée avec `mkfs.ext4 -i $DEPLOY_INODE_RATIO` (64 Kio) ; contrôle d'autotest.
+- [x] D-040 : `logind.conf.d/60-nomade.conf` (`RuntimeDirectorySize=25%`) ; contrôle d'autotest.
+- [x] D-042 / E-43 : `secureboot-db.service`, `fwupd.service`, `fwupd-refresh.timer` masqués au build ;
+      contrôles d'autotest.
+- [x] README § 5 (Secure Boot et PC « Secured-core ») ; checklist du rapport (veille, option MS UEFI CA).
+- [ ] Correctifs à chaud sur la clé (script fourni à Fabien : D-040, D-042, règle udev
+      `provisioning_mode=unmap` et `DEPLOY_DISCARD=1` corrigés) ; GNOME Logiciels sans lancement
+      automatique (fichier `~/.config/autostart`, fait).
+- [ ] Pousser la branche dès que GitHub répond — **avant tout redéploiement** (il efface la clé,
+      `/home` et ce clone compris).
+- [ ] Sur l'hôte : `make lint`, `make ci`, `make image`, `make test`, `make deploy-test` ; vérifier les
+      nouvelles lignes (E-25, E-30, E-43) et « TRIM : essai réussi » aux deux passages ; fusionner
+      dans `main`.
+- [ ] Image : GNOME Logiciels sans service résident, sans écraser `/etc/xdg/autostart` du squashfs
+      (méthode à choisir et à consigner).
+- [ ] Facultatif : initramfs sans pilotes réseau de serveur ni leurs firmwares (≈ 30 Mo sur 83,
+      ≈ 1 s de GRUB) ; rsyslog et avahi à couper (gains marginaux).

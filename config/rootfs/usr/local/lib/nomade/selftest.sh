@@ -107,6 +107,8 @@ locale_built() { locale -a 2>/dev/null | grep -qix "${TARGET_LOCALE/UTF-8/utf8}"
 user_has_group() { id -nG "$TARGET_USER" | tr ' ' '\n' | grep -qx "$1"; }
 initrd_has() { lsinitramfs "/boot/initrd.img-$(uname -r)" 2>/dev/null | grep -q "$1"; }
 journald_cap() { systemd-analyze cat-config systemd/journald.conf 2>/dev/null | grep -qx 'SystemMaxUse=200M'; }
+logind_runtime_25() { systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -qx 'RuntimeDirectorySize=25%'; }
+unit_masked() { [[ "$(systemctl is-enabled "$1" 2>/dev/null || true)" == masked ]]; }
 no_listen_ssh() { ! ss -Hltn 2>/dev/null | awk '{ print $4 }' | grep -qE ':22$'; }
 user_unlocked() { [[ "$(passwd -S "$TARGET_USER" 2>/dev/null | awk '{ print $2 }')" == P ]]; }
 # Clé déployée : racine → mappeur → partition → disque USB
@@ -142,6 +144,16 @@ fs_fills_device() {
   bc="$(dumpe2fs -h "$ROOT_SRC" 2>/dev/null | awk -F: '/^Block count:/ { print $2 + 0 }')"
   dev="$(blockdev --getsize64 "$ROOT_SRC")"
   (( bs * bc * 100 >= dev * 99 ))
+}
+# Racine recréée avec DEPLOY_INODE_RATIO octets par inode (D-041), à 10 % près
+inode_ratio_ok() {
+  local want bs bc ic
+  want="$(deploy_val DEPLOY_INODE_RATIO)"
+  [[ "$want" =~ ^[0-9]+$ ]] || return 1
+  bs="$(dumpe2fs -h "$ROOT_SRC" 2>/dev/null | awk -F: '/^Block size:/ { print $2 + 0 }')"
+  bc="$(dumpe2fs -h "$ROOT_SRC" 2>/dev/null | awk -F: '/^Block count:/ { print $2 + 0 }')"
+  ic="$(dumpe2fs -h "$ROOT_SRC" 2>/dev/null | awk -F: '/^Inode count:/ { print $2 + 0 }')"
+  ((ic > 0)) && (( bs * bc * 10 >= want * 9 * ic ))
 }
 usb_rule_for() { grep -qs "ATTRS{idVendor}==\"${1%:*}\", ATTRS{idProduct}==\"${1#*:}\"" /etc/udev/rules.d/60-nomade-usb.rules; }
 # shellcheck disable=SC2053  # $2 est un motif (ex. *[mq-deadline]*)
@@ -269,6 +281,7 @@ check E-24 "fstrim.timer activé" systemctl is-enabled --quiet fstrim.timer
 check E-25 "profile-sync-daemon installé" pkg_installed profile-sync-daemon
 check E-25 "psd activé pour les sessions" test -e /etc/systemd/user/default.target.wants/psd.service
 check E-25 "définition psd pour Brave" conf_has /usr/share/psd/browsers/brave 'BraveSoftware/Brave-Browser'
+check E-25 "/run/user plafonné à 25 % de la RAM (profil psd, D-040)" logind_runtime_25
 check E-26 "profil dconf avec system-db:local" conf_has /etc/dconf/profile/user '^system-db:local$'
 check E-26 "base dconf local compilée" test -f /etc/dconf/db/local
 check E-26 "Tracker : extraction du contenu coupée (max-bytes=0)" gs_is org.freedesktop.Tracker3.Extract max-bytes 0
@@ -286,6 +299,9 @@ for u in smartd.service NetworkManager-wait-online.service whoopsie.service whoo
   check E-40 "$u désactivé" unit_off "$u"
 done
 check E-40 "unattended-upgrades conservé (D-022)" pkg_installed unattended-upgrades
+for u in secureboot-db.service fwupd.service fwupd-refresh.timer; do
+  check E-43 "$u masqué (aucune écriture dans le firmware de l'hôte)" unit_masked "$u"
+done
 
 # --- E-29 à E-33 clé déployée (scripts/deploy-test.sh) --------------------------------
 if [[ "$DEPLOYED" == 1 ]]; then
@@ -301,6 +317,7 @@ if [[ "$DEPLOYED" == 1 ]]; then
     check E-30 "crypttab : option discard" crypttab_discard
     check E-30 "/boot en clair" boot_plain
     check E-30 "initramfs : crypttab de la racine" initrd_has cryptroot/crypttab
+    check E-30 "racine recréée à $(deploy_val DEPLOY_INODE_RATIO) octets par inode (D-041)" inode_ratio_ok
   fi
   expect_usb="$(fwval expect_usb)"
   if [[ -n "$expect_usb" ]]; then
