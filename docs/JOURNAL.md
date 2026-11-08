@@ -249,3 +249,14 @@ puces, le parcours sysfs et le protocole de mesure, pas le code Rust (lié à `d
 `assistant` ; Rust ≥ 1.85 absent de Noble ; pas de `cargo` sur la clé) ; anonymisation sur liste
 blanche avec empreintes salées par clé ; `make diag-rapport` vers `docs/terrain.md`. Constats : l'image
 a `python3`, `jq`, `zstd`, `mokutil`, `dmidecode`, `mesa-utils`, mais ni `exfatprogs` ni `fio`.
+
+## 2026-11-08 18:30 — note de conception révisée : deux diagnostics
+Précision de Fabien : un diagnostic **depuis l'hôte, avant le déploiement**, pour éprouver la clé à
+fond, et un autre **depuis le système déployé**, qui sauvegarde son rapport. La première version ne
+prévoyait que le second. Ajouté : `make diag-cle KEY=…`, outil séparé de `deploy`, en lecture seule
+par défaut (identification sans root, lectures directes avec `sudo`, nouvelle garde
+`assert_usb_disk` sans saisie du numéro de série) et complet sur demande (`COMPLET=1`, garde
+`assert_real_usb_target` inchangée : capacité réelle, TRIM réel, écritures, cache SLC, remise à
+vide) ; essais sur loop et contrefaçon simulée par device-mapper dans la VM. Module Python commun aux
+deux outils ; empreinte de la clé calculée par l'hôte et transmise par `deploy-info`. `smartctl`
+absent de l'hôte (SMART facultatif).

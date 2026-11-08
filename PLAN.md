@@ -68,12 +68,15 @@ données comparables. Les tests grandeur nature qui suivront définiront les ver
 
 - [x] Version ouverte sur la branche `retours-terrain` : `PROJECT_VERSION=0.2.0-alpha`, section
       « Non publié » de `CHANGELOG.md`.
-- [ ] Note de conception `docs/developpement/conception-0.2.md` (`NOMADE-DATA`, `nomade-diag`,
-      `make diag-rapport`) **validée par Fabien** ; aucun code avant.
+- [ ] Note de conception `docs/developpement/conception-0.2.md` (`NOMADE-DATA`, `make diag-cle`,
+      `nomade-diag`, `make diag-rapport`) **validée par Fabien** ; aucun code avant.
 - [ ] Partition exFAT `NOMADE-DATA` active par défaut, à 10 % de la clé (`DEPLOY_DATA_PCT`, plancher
       à fixer, `DEPLOY_DATA_GIB` en surcharge, 0 : aucune) ; accessible depuis la clé sans mot de passe
       administrateur (`fstab` ou règle udisks, à vérifier) ; autotest et `make deploy-test`. Décision à
       consigner. Sans effet sur la clé de 1 To (pas de redéploiement).
+- [ ] `make diag-cle KEY=…` sur l'hôte, avant le déploiement : outil séparé de `deploy`, lecture seule
+      par défaut (identification, lectures directes), analyse complète sur demande (`COMPLET=1`, efface
+      la clé : capacité réelle, TRIM réel, écritures, cache SLC) ; verdict A–D et alertes.
 - [ ] `nomade-diag` sur la clé (note de conception d'abord, en partant de l'onglet Diagnostic de
       Fabrique-Clé : `reference/debian/app/src/diagnostic/`, table `fabricants-usb.txt`) : versions et autotest, machine hôte
       (modèle, firmware, Secure Boot, « Microsoft UEFI CA » dans db, GPU), clé et pont USB (UAS, vitesse,
