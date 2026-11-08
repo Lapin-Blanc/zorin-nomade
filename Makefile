@@ -2,6 +2,7 @@ SHELL := /bin/bash
 .SHELLFLAGS := -Eeuo pipefail -c
 .DEFAULT_GOAL := help
 S := scripts
+VERSION := $(shell sed -n 's/^PROJECT_VERSION=\([^ ]*\).*/\1/p' config/project.env)
 
 # Scripts écrits pendant le run (phases 1 et 3) : message clair s'ils n'existent pas encore.
 define need
@@ -9,6 +10,7 @@ define need
 endef
 
 help: ## Affiche cette aide
+	@echo "zorin-nomade $(VERSION) — make <cible> :"
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{ printf "  %-16s %s\n", $$1, $$2 }'
 
 doctor: ## Vérifie l'hôte : outils, KVM, OVMF, garde-fous, espace disque

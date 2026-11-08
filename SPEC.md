@@ -39,7 +39,7 @@ Les valeurs paramétrables (utilisateur, tailles, locale…) sont dans `config/p
 - E-07 `/etc/fstab` par UUID ; racine montée avec
   `noatime,lazytime,commit=60,errors=remount-ro`.
 - E-08 Fichier `/etc/nomade/expected.env` écrit au build (valeurs attendues par l'autotest :
-  utilisateur, hostname, locale…) et `/etc/nomade/build-info` (date, version ISO, commit git).
+  utilisateur, hostname, locale…) et `/etc/nomade/build-info` (date, version de l'outil `NOMADE_VERSION`, version ISO, commit git).
 
 ## 4. Démarrage
 

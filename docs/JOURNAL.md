@@ -176,3 +176,12 @@ Run 42480117641 (commit `a078949`) : construction 6 min, `make test` → `RESULT
 activé (78 s) et désactivé (72 s), 107 contrôles dont les nouveaux E-25 (`/run/user` à 25 %) et E-43
 (3 unités masquées) ; capture : écran de connexion GNOME. Reste `make deploy-test` sur l'hôte (contrôle
 E-30 des inodes, essai de TRIM aux deux passages) avant la fusion de la PR #1.
+
+## 2026-11-08 14:30 — le dépôt devient l'outil (branche `outil-alpha`, D-044)
+Constat avec Fabien : le code est un outil fonctionnel (alpha), mais le README et les fichiers de tête
+décrivaient le chantier (archive de base, phase 0, run autonome). Réorganisation : README en mode
+d'emploi, `docs/premier-demarrage.md`, `docs/developpement/` (guide, `prompts/`, rapport du run, plan
+v0.1 déplacés par `git mv`), `PLAN.md` en feuille de route (0.1.0-alpha, 0.2 « entretien d'une clé
+déployée », plus tard), `CLAUDE.md` recadré, `docs/A-FAIRE-FABIEN.md` à jour, `CHANGELOG.md`. Version
+0.1.0-alpha : `PROJECT_VERSION`, `NOMADE_VERSION` (build-info, contrôle E-08), `DEPLOY_VERSION`,
+`make help`. Branche partie de `correctifs-cle` (PR #1 pas encore fusionnée).

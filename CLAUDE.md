@@ -1,8 +1,11 @@
 # zorin-nomade — consignes pour Claude Code
 
-Tu construis un **Zorin OS 18.x Core installé (pas un live)** destiné à une clé USB SSK
-(SSD NVMe derrière un pont USB), qui doit démarrer sur n'importe quel PC UEFI.
-Le système cible est décrit dans `SPEC.md` ; le déroulé dans `PLAN.md`.
+zorin-nomade est un **outil** (version `PROJECT_VERSION` dans `config/project.env`, historique dans
+`CHANGELOG.md`) qui construit et déploie un **Zorin OS 18.x Core installé (pas un live)** sur une clé
+USB SSK (SSD NVMe derrière un pont USB), démarrable sur n'importe quel PC UEFI. Il est utilisé au
+quotidien : tu le **maintiens et le fais évoluer** sans casser ce qui marche.
+Le système cible est décrit dans `SPEC.md` ; la feuille de route dans `PLAN.md` ; le mode d'emploi
+dans `README.md` ; la façon de développer dans `docs/developpement/README.md`.
 Ce fichier dit **comment** travailler.
 
 Langue du projet : **français** (documentation, commentaires, messages de commit, journal).
@@ -48,8 +51,8 @@ make test  (QEMU + OVMF sur l'hôte, sans root)  ◀──  out/*.img rapatriée
 
 - En **run autonome**, ne pose aucune question : prends la décision la plus raisonnable,
   consigne-la dans `DECISIONS.md` (format existant, une entrée par décision), et continue.
-- En **phase 0** (interactive), tu peux poser des questions à Fabien, puis tu t'arrêtes
-  sur une synthèse.
+- En **travail interactif** (retouches, ou phase d'inspection avant un chantier), tu peux poser des
+  questions à Fabien ; pour un chantier, arrête-toi sur une synthèse avant de lancer le plan.
 - Si un problème résiste à **3 tentatives** sur la même piste : écris l'analyse dans
   `docs/JOURNAL.md`, change d'approche (en respectant les priorités de `SPEC.md`).
   Si c'est vraiment bloquant, marque la tâche `[!]` dans `PLAN.md`, explique pourquoi,
@@ -63,7 +66,10 @@ make test  (QEMU + OVMF sur l'hôte, sans root)  ◀──  out/*.img rapatriée
 - `docs/JOURNAL.md` : entrées courtes et datées (ce qui a été fait, ce qui a échoué, pourquoi).
 - `DECISIONS.md` : décisions et déviations.
 - `docs/iso-notes.md` : ce que la phase 0 a appris de l'ISO (structure, paquets, pièges).
-- Après une compaction ou une reprise, **relis ces quatre fichiers** avant d'agir.
+- `CHANGELOG.md` : tout changement visible (image, déploiement, commandes, paramètres) va sous
+  « Non publié ». Une version se publie selon `docs/developpement/README.md` ; ne pose jamais
+  d'étiquette git sans la demande de Fabien.
+- Après une compaction ou une reprise, **relis ces fichiers** avant d'agir.
 - **Commit git à chaque étape terminée** (message en français, impératif : « Ajoute… »,
   « Corrige… »). Ne committe jamais `cache/`, `out/`, `.builder/`, `reference/`.
 
@@ -88,6 +94,10 @@ make test  (QEMU + OVMF sur l'hôte, sans root)  ◀──  out/*.img rapatriée
 - Le résultat d'un test se lit dans `out/test/<essai>/serial.log` (lignes `NOMADE-SELFTEST:`)
   et la capture d'écran `out/test/<essai>/screen.png` (tu peux l'ouvrir pour vérifier
   que l'écran de connexion GNOME s'affiche).
+- Si tu tournes **sur une clé nomade** (`/etc/nomade/deploy-info` existe), `make`, QEMU et OVMF y
+  sont absents : lint par shellcheck extrait sans root, construction et tests par la CI,
+  `make deploy-test` laissé à l'hôte (`docs/developpement/README.md`). Sur la clé, la règle « jamais
+  de root » vaut comme sur l'hôte : les changements système passent par un script que Fabien lance.
 
 ## Commandes utiles
 
