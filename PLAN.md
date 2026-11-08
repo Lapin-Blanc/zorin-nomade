@@ -121,17 +121,19 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
 
 ## Phase 4 — CI (D-023)
 
-- [ ] `.github/workflows/lint.yml` : inchangé (lint à chaque push).
-- [ ] `.github/workflows/image.yml` : push sur `scripts/**`, `config/**`, `Makefile`, le workflow,
+- [x] `.github/workflows/lint.yml` : inchangé (lint à chaque push).
+- [x] `.github/workflows/image.yml` : push sur `scripts/**`, `config/**`, `Makefile`, le workflow,
       et `workflow_dispatch` ; runner ubuntu-24.04 ; espace disque libéré ; outils installés ; accès
       KVM (règle udev, comme le projet Debian) ; ISO en `actions/cache` (clé = `ISO_SHA256`) ;
       `sudo scripts/vm/build.sh …` directement sur le runner ; `make test` en utilisateur ;
       artefacts de diagnostic (`out/logs/`, `out/test/*/serial.log`, `screen.png`, `summary.txt`) ;
       pas d'image en artefact.
-- [ ] Documenter dans `README.md` ce qui tourne en CI et ce qui reste local (déploiement).
-- [ ] `make ci` = lint + `scripts/test-guards.sh` (refus attendus des garde-fous, sans root).
-- [ ] **Acceptation** : `make ci` passe localement ; le workflow `image` est vert sur GitHub dès que
+- [x] Documenter dans `README.md` ce qui tourne en CI et ce qui reste local (déploiement).
+- [x] `make ci` = lint + `scripts/test-guards.sh` (refus attendus des garde-fous, sans root).
+- [x] **Acceptation** : `make ci` passe localement ; le workflow `image` est vert sur GitHub dès que
       Fabien a créé le dépôt et poussé (sinon noter dans `docs/A-FAIRE-FABIEN.md`).
+      → `make ci` vert en local ; dépôt GitHub pas encore créé : marche à suivre dans
+      `docs/A-FAIRE-FABIEN.md` (vérification du workflow `image` sur GitHub à faire par Fabien).
 
 ## Phase 5 — Reproductibilité et rapport
 

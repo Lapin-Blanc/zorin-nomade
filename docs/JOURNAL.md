@@ -100,3 +100,13 @@ Démarrage : question détectée à 24 s, phrase acceptée en 3 s (touches AZERT
 Secure Boot activé et désactivé, 118 contrôles (racine dm-crypt, drapeaux LUKS persistants,
 `discard`, règle udev appliquée, racine agrandie, compte déverrouillé). Aucun secret dans les
 journaux (contrôlé par `deploy-test.sh`). Phase 3 terminée.
+
+## 2026-11-08 10:40 — phase 4 / CI
+`image.yml` : déclenché par `scripts/**`, `config/**`, `Makefile`, le workflow, et à la demande ;
+espace libéré, outils, KVM (règle udev), `make ci`, ISO en `actions/cache` (restauration puis
+enregistrement immédiat après téléchargement), `sudo scripts/vm/build.sh` sur le runner (shell
+`bash -eo pipefail` pour que `| grep` ne masque pas un échec), `make test`, synthèse dans le résumé
+du job, artefact `diagnostic` (journaux, série, captures, manifeste ; pas d'image). `lint.yml` lance
+`make ci`, qui ajoute `scripts/test-guards.sh` (16 refus attendus des garde-fous, sans root).
+Validation locale : YAML chargé, étapes `run` passées à shellcheck (`actionlint` absent de l'hôte).
+Pas de dépôt GitHub : rien n'est poussé ; marche à suivre dans `docs/A-FAIRE-FABIEN.md`.
