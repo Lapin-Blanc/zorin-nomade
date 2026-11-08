@@ -46,6 +46,8 @@ Fabien et utilisée depuis le 2026-11-08. Date posée à l'étiquetage.
 - Racine recréée à 64 Kio par inode au lieu de 16 Kio : ≈ 12 Gio d'écritures en moins au premier
   démarrage d'une clé de 1 To.
 - CI : accès à KVM rétabli après la construction.
+- `deploy.sh` relève le pilote du pont USB (`DEPLOY_USB_DRIVER`) et adapte le récapitulatif final
+  (pilote attendu, TRIM ou non) ; essayé sur un second pont, VIA VL817 (`usb-storage`, sans TRIM).
 
 ### Dépôt
 - Le dépôt devient l'outil : `README.md` en mode d'emploi, checklist `docs/premier-demarrage.md`, traces

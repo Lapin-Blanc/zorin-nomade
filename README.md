@@ -146,7 +146,11 @@ système (compte, langue, clavier, fuseau) comptent au `make image` suivant ; ce
 - UEFI uniquement (pas de BIOS hérité) ; pas de pilote graphique propriétaire (NVIDIA : nouveau).
 - Phrase de passe LUKS en ASCII uniquement.
 - Un redéploiement efface `/home` ; aucun outil de mise à jour de la configuration d'une clé déployée.
-- Pas encore essayé : mise en veille, PC avec Secure Boot actif, matériel NVIDIA, autres ponts USB.
+- Pas encore essayé : mise en veille, PC avec Secure Boot actif, matériel NVIDIA.
+- Ponts USB essayés : SSK `090c:2320` (SSD NVMe, UAS, TRIM) et VIA VL817 `2109:0715` (SSK 128 Go,
+  SSD SATA). Pour ce dernier, le noyau ignore UAS (`usb-storage`) et le pont refuse le TRIM : la clé
+  fonctionne, sans TRIM et avec des écritures plus lentes (≈ 225 Mio/s). `deploy.sh` le détecte et
+  règle la clé en conséquence.
 - L'image n'est pas publiée : elle se construit localement (`DECISIONS.md`, D-043).
 
 ## Intégration continue (GitHub Actions)

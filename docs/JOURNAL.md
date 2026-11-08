@@ -215,3 +215,16 @@ distante `outil-alpha` reste à supprimer (refusée par le mode automatique de C
 Avec Fabien : 0.2 « retours du terrain » (`NOMADE-DATA` par défaut à 10 %, `nomade-diag`, rapport
 comparatif, GNOME Logiciels) ; `nomade-update` et le redéploiement sans perte au second plan, sans
 version prévue : les tests grandeur nature décideront des versions suivantes.
+
+## 2026-11-08 17:00 — premier déploiement réel sur une clé SSK de 128 Go
+Par Fabien depuis `main`, image `zorin-nomade-20261108-1555` (reconstruite par lui, mêmes scripts de
+construction que l'image validée), sortie gardée par `tee`. Clé SSK « Portable SSD 128GB » : pont VIA
+VL817 `2109:0715`, SSD SATA, 10 Gbit/s négociés. Le noyau ignore UAS pour ce pont (quirk intégré,
+`usb-storage`) ; `rotational=1` vu par le noyau, corrigé par la règle udev. Essai de TRIM : `blkdiscard
+-f` atteint le périphérique, refusé par le pont (« Illegal Request », EIO) → `DEPLOY_DISCARD=0`, règle
+sans `provisioning_mode` ; la cause réelle s'affiche (correctif de la PR #1). Écriture `bmaptool`
+225 Mio/s (560 sur la clé de 1 To), déploiement en 3 min 57 s, contrôles finaux sains. Démarrage et
+contrôles du premier démarrage conformes (Fabien). Le port (USB-A ou USB-C) n'aurait rien changé :
+UAS, TRIM et vitesse maximale dépendent du pont. Correctif : `deploy.sh` relève le pilote USB
+(`DEPLOY_USB_DRIVER`) et adapte le récapitulatif, qui annonçait toujours `uas` ; `make deploy-test` vert
+(124 contrôles, Secure Boot activé et désactivé).
