@@ -286,3 +286,15 @@ contrefaçon device-mapper 1 Gio sur 512 Mio : repliement détecté, « ne pas d
 gardes hors mode test). Incident : le `make image` suivant a échoué à l'envoi du dépôt, `diag-cle`
 lancé en root avait créé `/work/repo/diagnostics/` au nom de root. Corrigé : `diag-cle.sh` crée
 toujours `diagnostics/` au nom de l'appelant de `sudo` (comme `deploy.sh`).
+
+## 2026-11-08 19:50 — run 0.2 : R4 à R7 validés, fin du run
+`nomade-diag` (collecte, anonymisation, lanceur, `selftest.sh --materiel`, `--mesures`), `make
+diag-rapport`, liens avec `deploy.sh` (empreinte, sel, verdict du dernier `diag-cle`), `make doctor`.
+Essais sur l'hôte en lecture seule (sections de collecte ; écriture plafonnée : 61 Mio pour 64) :
+`lscpu` répondait en français, d'où `LC_ALL=C.UTF-8` pour toutes les commandes. Image finale
+`zorin-nomade-20261108-1920` : `make test` PASS Secure Boot activé et désactivé (114 contrôles), dont E-46 (lanceur, archive,
+autotest en mode matériel rapporté) et E-47 (ni série repère du disque simulé, ni MAC, ni
+`machine-id`, ni nom d'utilisateur), aucune section « non lue ». `make deploy-test` PASS (136
+contrôles) : archive rangée sur `NOMADE-DATA`, empreinte de la clé identique aux deux démarrages
+(reprise de `deploy-info`). Non essayés : SMART (ni `smartctl` sur l'hôte, ni pont dans la VM),
+mesures réelles. Commits `f48129f`, `5462ebe` et suivant ; rien n'est poussé.

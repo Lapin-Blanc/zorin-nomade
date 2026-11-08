@@ -70,22 +70,22 @@ données comparables. Les tests grandeur nature qui suivront définiront les ver
       « Non publié » de `CHANGELOG.md`.
 - [x] Note de conception `docs/developpement/conception-0.2.md` (`NOMADE-DATA`, `make diag-cle`,
       `nomade-diag`, `make diag-rapport`) : questions tranchées par Fabien (D-046 à D-049).
-- [ ] Partition exFAT `NOMADE-DATA` active par défaut, à 10 % de la clé (`DEPLOY_DATA_PCT`, plancher
+- [x] Partition exFAT `NOMADE-DATA` active par défaut, à 10 % de la clé (`DEPLOY_DATA_PCT`, plancher
       8 Gio, `DEPLOY_DATA_GIB` en surcharge, 0 : aucune) ; montée par `fstab` sur `/media/NOMADE-DATA`
       (UUID, `uid=1000`, `nofail`), `exfatprogs` dans l'image ; autotest E-44 et `make deploy-test`
       (D-046). Sans effet sur la clé de 1 To (pas de redéploiement).
-- [ ] `make diag-cle KEY=…` sur l'hôte, avant le déploiement : outil séparé de `deploy`, lecture seule
+- [x] `make diag-cle KEY=…` sur l'hôte, avant le déploiement : outil séparé de `deploy`, lecture seule
       par défaut (identification, lectures directes), analyse complète sur demande (`COMPLET=1`, efface
       la clé : capacité réelle, TRIM réel, écritures, `DUREE=1` min, cache SLC), SMART si `smartctl` ;
       verdict A–D et alertes ; `make diag-cle-test` dans la VM (contrefaçon simulée) (D-048).
-- [ ] `nomade-diag` sur la clé (module Python commun avec `diag-cle`, D-047 ; lanceur dans le menu) :
+- [x] `nomade-diag` sur la clé (module Python commun avec `diag-cle`, D-047 ; lanceur dans le menu) :
       versions et autotest (`selftest.sh --materiel`), machine hôte
       (modèle, firmware, Secure Boot, « Microsoft UEFI CA » dans db, GPU), clé et pont USB (UAS, vitesse,
       TRIM, réinitialisations), temps de démarrage, mémoire et écritures, erreurs ; mesures de
       performance en option (écriture sur la racine, plafond 1 Gio). Anonymisé par défaut (numéros de série remplacés par une
       empreinte, ni MAC, ni IP, ni réseaux, ni noms). Archive `nomade-diag-<date>-<modèle>.tar.zst`
       avec `resume.json` stable, écrite sur `NOMADE-DATA` si elle existe.
-- [ ] Côté hôte : `make diag-rapport` rassemble les `resume.json` (`diagnostics/resumes/` et
+- [x] Côté hôte : `make diag-rapport` rassemble les `resume.json` (`diagnostics/resumes/` et
       `docs/terrain.md` versionnés, archives hors de git, D-049) en un tableau comparatif ; `deploy.sh`
       affiche le verdict du dernier `diag-cle` et transmet empreinte et sel.
 Run autonome (2026-11-08, étapes de la note § 7 ; l'étape 7, essais réels, revient à Fabien) :
@@ -95,13 +95,16 @@ Run autonome (2026-11-08, étapes de la note § 7 ; l'étape 7, essais réels, r
       `assert_usb_disk` et ses refus, `make diag-cle`, `make diag-cle-test` (VM), tests unitaires.
 - [x] R3 `diag-cle COMPLET=1` : capacité, TRIM réel, écritures, écriture longue, remise à vide ;
       contrefaçon simulée ; SPEC E-45.
-- [ ] R4 `nomade-diag` : collecte, anonymisation, lanceur, `selftest.sh --materiel`, autotest E-46,
+- [x] R4 `nomade-diag` : collecte, anonymisation, lanceur, `selftest.sh --materiel`, autotest E-46,
       numéro de série repère ; `make all`.
-- [ ] R5 `nomade-diag --mesures` (lecture, écriture plafonnée, AES).
-- [ ] R6 `make diag-rapport`, `diagnostics/`, `docs/terrain.md` ; `deploy.sh` : verdict du dernier
+- [x] R5 `nomade-diag --mesures` (lecture, écriture plafonnée, AES).
+- [x] R6 `make diag-rapport`, `diagnostics/`, `docs/terrain.md` ; `deploy.sh` : verdict du dernier
       `diag-cle`, empreinte et sel transmis ; `make doctor` (smartctl facultatif) ; `make deploy-test`.
-- [ ] R7 rapport de run `docs/developpement/rapport-run-0.2.md`.
+- [x] R7 rapport de run `docs/developpement/rapport-run-0.2.md`.
 
+- [ ] Essais réels (Fabien, `docs/developpement/rapport-run-0.2.md`) : `diag-cle` sur les deux clés,
+      analyse complète et redéploiement de la 128 Go, `nomade-diag` sur quelques PC, étalonnage contre
+      Fabrique-Clé, premier `docs/terrain.md`.
 - [ ] Image : GNOME Logiciels sans service résident, sans écraser `/etc/xdg/autostart` du squashfs
       (méthode à choisir et à consigner).
 

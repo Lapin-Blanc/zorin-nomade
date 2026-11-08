@@ -12,7 +12,10 @@ Branche `retours-terrain`. Plan : `PLAN.md` (étapes R1 à R7), conception :
 | R3 `diag-cle COMPLET=1` | capacité réelle, TRIM réel, écritures aléatoires et synchronisées, écriture longue (`DUREE=1`), remise à vide ; verdict A–D | `make diag-cle-test` : contrefaçon device-mapper détectée, « ne pas déployer » |
 | R4 `nomade-diag` | collecte (PC, Secure Boot, affichage, périphériques, clé, démarrage, mémoire, écritures, erreurs), anonymisation, lanceur du menu, `selftest.sh --materiel` | autotest QEMU E-46 et E-47 : archive produite, aucune valeur repère (série du disque simulé, MAC, `machine-id`, utilisateur) |
 | R5 `--mesures` | lectures directes, écritures `O_TMPFILE` plafonnées (1 Gio), AES | autotest (`--mesures --ecriture-max 64`) ; essai sur l'hôte (61 Mio écrits pour 64) |
-| R6 rapport et liens | `make diag-rapport`, `diagnostics/`, `docs/terrain.md` ; `deploy.sh` : empreinte, sel copié, verdict du dernier `diag-cle` ; `make doctor` | tests unitaires ; `make deploy-test RUNS=2` (voir le journal) |
+| R6 rapport et liens | `make diag-rapport`, `diagnostics/`, `docs/terrain.md` ; `deploy.sh` : empreinte, sel copié, verdict du dernier `diag-cle` ; `make doctor` | tests unitaires ; `make deploy-test RUNS=2` PASS ; empreinte stable d'un démarrage à l'autre |
+
+Image finale `zorin-nomade-20261108-1920` : `make test` PASS (Secure Boot activé et désactivé, 114 contrôles), `make deploy-test`
+PASS (136 contrôles, dont E-44, E-46, E-47), `make ci` et `make diag-cle-test` PASS.
 
 ## Reste pour Fabien (étape 7 de la note)
 
