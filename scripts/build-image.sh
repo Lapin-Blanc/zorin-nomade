@@ -28,7 +28,7 @@ iso="$("$S/fetch-iso.sh")"
 "$S/builder.sh" up
 
 vm_iso="/work/iso/$(basename "$iso")"
-if vm "echo '${ISO_SHA256,,}  $vm_iso' | sha256sum -c --quiet - 2>/dev/null"; then
+if vm "echo '${ISO_SHA256,,}  $vm_iso' | sha256sum -c --quiet - >/dev/null 2>&1"; then
   log "ISO déjà présente dans la VM"
 else
   log "Envoi de l'ISO dans la VM…"

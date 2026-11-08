@@ -117,3 +117,11 @@ Clone propre dans un dossier temporaire profond, VM détruite : construction dep
 QMP (`out/test/sb-on/qmp.sock` sous un chemin long) dépasse la limite de 108 octets des sockets Unix.
 Défaut invisible dans le dépôt principal (chemin court). Correction : sockets dans
 `$XDG_RUNTIME_DIR/nomade-qmp.XXXXXX`. Chaîne complète relancée depuis le clone mis à jour.
+
+## 2026-11-08 11:15 — phase 5 / acceptation et rapport
+Clone propre mis à jour (`6b00b2d`), `make builder-destroy && make all` : 19 min 26 s, VM neuve, build
+en 13 min avec cache APT vide, `RESULT=PASS` (103 contrôles) avec et sans Secure Boot. E-38 tenue.
+Clone et sa VM supprimés ; la VM du dépôt principal aussi (recréée au prochain `make image`).
+`docs/RAPPORT.md` écrit (résultats, déviations, limites, checklist du premier démarrage natif).
+Contrôle de présence de l'ISO dans la VM rendu silencieux (message « FAILED open or read »
+trompeur). Fin du run autonome : phases 0 à 5 terminées.

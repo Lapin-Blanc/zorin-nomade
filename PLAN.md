@@ -137,10 +137,10 @@ chemins en arguments ; `scripts/build-image.sh` (hôte) orchestre envoi → exé
 
 ## Phase 5 — Reproductibilité et rapport
 
-- [ ] `make builder-destroy && make all` depuis un clone propre (E-38).
-- [ ] `docs/RAPPORT.md` : ce qui a été fait, déviations, limites connues, durée et taille
+- [x] `make builder-destroy && make all` depuis un clone propre (E-38).
+- [x] `docs/RAPPORT.md` : ce qui a été fait, déviations, limites connues, durée et taille
       des artefacts, **checklist du premier démarrage natif** pour Fabien (Wi-Fi, son,
       `lsusb -t` → `uas`, `lsblk --discard`, `fstrim -v /`, `swapon`, session GNOME, Brave + psd
       (`psd p`), recherche par nom, `journalctl -k | grep uas_eh` (pont SSK 090c:2320),
       démarrage sur un PC Secure Boot et un PC sans).
-- [ ] Mettre à jour `README.md` si l'usage a changé.
+- [x] Mettre à jour `README.md` si l'usage a changé.
